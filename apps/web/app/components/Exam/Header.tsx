@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Clock, User, Hash, Monitor } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import Logo from "~/assets/Logo.png";
+import Logo from "~/components/Logo";
 
 interface ExamHeaderProps {
   examName: string;
@@ -72,28 +72,28 @@ export default function ExamHeader({
   }, [initialRemainingMs, onSubmit]);
 
   return (
-    <header className="bg-white border-b border-gray-200 shadow-xs z-10">
+    <header className="bg-background border-b border-border shadow-xs z-10">
       <div className="px-5 h-14 flex items-center justify-between gap-4">
         {/* ── Left: brand + exam info ── */}
         <div className="flex items-center gap-3 min-w-0 flex-1 basis-0">
-          <img src={Logo} alt="Derit" className="w-8 h-8 shrink-0" />
+          <Logo size="sm" />
           <div className="min-w-0">
-            <h1 className="text-sm font-semibold text-gray-900 truncate leading-tight">
+            <h1 className="text-sm font-semibold text-foreground truncate leading-tight">
               {examName}
             </h1>
             <div className="flex items-center gap-3 mt-0.5">
-              <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <User className="w-3 h-3" />
                 {studentName}
               </span>
               {studentId && (
-                <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <Hash className="w-3 h-3" />
                   {studentId}
                 </span>
               )}
               {computerOrder != null && computerOrder !== "" && (
-                <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <Monitor className="w-3 h-3" />
                   PC {computerOrder}
                 </span>

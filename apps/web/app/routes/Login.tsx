@@ -1,5 +1,5 @@
 import { Button } from "~/components/ui/button";
-import Logo from "~/assets/Logo.png";
+import Logo from "~/components/Logo";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { authAPI } from "~/lib/api";
@@ -40,34 +40,32 @@ export default function Login() {
   }, [searchParams]);
 
   return (
-    <div className="w-screen h-screen flex justify-center items-center bg-gray-50">
-      <div className="flex flex-col gap-6 bg-white rounded-lg px-5 py-10 border max-w-md w-full">
+    <div className="w-screen h-screen flex justify-center items-center bg-background">
+      <div className="flex flex-col gap-6 bg-card rounded-lg px-5 py-10 border border-border max-w-md w-full">
         <div className="flex flex-col items-center gap-4">
-          <div className="size-14 rounded-md">
-            <img src={Logo} alt="Derit" className="w-full h-full" />
-          </div>
+          <Logo size="lg" />
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 text-center">
+            <h1 className="text-3xl font-bold text-foreground text-center">
               DERIT
             </h1>
-            <p className="text-sm text-gray-500 text-center mt-1">
+            <p className="text-sm text-muted-foreground text-center mt-1">
               Exam System
             </p>
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
             {error}
           </div>
         )}
 
         {needsSetup && (
-          <div className="bg-green-50 border border-green-200 px-4 py-3 rounded-lg text-sm">
-            <p className="font-medium text-green-800 mb-1">
+          <div className="bg-success/10 border border-success/20 px-4 py-3 rounded-lg text-sm">
+            <p className="font-medium text-success mb-1">
               First time setup detected
             </p>
-            <p className="text-green-700">
+            <p className="text-success">
               The first user to login will become the Super Admin.
             </p>
           </div>
@@ -83,7 +81,7 @@ export default function Login() {
             );
           }}
           title="Login with Google"
-          className="w-fit mx-auto cursor-pointer rounded-lg ring-0! border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 bg-white text-gray-800 font-medium py-5 flex gap-3 items-center justify-center duration-200 transition-all"
+          className="w-fit mx-auto cursor-pointer rounded-lg ring-0! border-2 border-border hover:border-primary hover:bg-accent bg-card text-foreground font-medium py-5 flex gap-3 items-center justify-center duration-200 transition-[color,background-color,border-color]"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -112,8 +110,8 @@ export default function Login() {
         </Button>
 
         {studentRegAllowed && allowedDomains.length > 0 && (
-          <p className="font-medium text-sm text-gray-500 text-center flex items-center justify-center space-x-1">
-            <p className="text-red-500 mr-1">*</p>
+          <p className="font-medium text-sm text-muted-foreground text-center flex items-center justify-center space-x-1">
+            <p className="text-destructive mr-1">*</p>
             Student: ***@{allowedDomains.join(" or ***@")}
           </p>
         )}

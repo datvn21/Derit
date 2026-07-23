@@ -1,5 +1,5 @@
 import { useStudent } from "~/stores/studentStore";
-import Logo from "../assets/Logo.png";
+import Logo from "~/components/Logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,11 +27,9 @@ export default function Header() {
     }
   };
   return (
-    <div className="py-2 border-b border-primary">
+    <div className="py-2 border-b border-sidebar-border">
       <div className="w-[95vw] mx-auto flex justify-between items-center">
-        <div className="max-w-12 max-h-12">
-          <img src={Logo} alt="Derit Logo" />
-        </div>
+        <Logo size="md" alt="Derit Logo" />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex gap-2 items-center cursor-pointer">
@@ -49,7 +47,7 @@ export default function Header() {
             <DropdownMenuItem>
               <div
                 onClick={logout}
-                className="p-2 text-center text-red-500 hover:bg-red-500 hover:text-white duration-100"
+                className="p-2 text-center text-destructive hover:bg-destructive/10 duration-100"
               >
                 Logout
               </div>

@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
+import crypto from "crypto";
 import { connectDB } from "./src/config/db.js";
 import passport from "passport";
 import authRouter from "./src/routes/auth.js";
@@ -20,10 +21,22 @@ import MongoStore from "connect-mongo";
 import { initNsjailExecutor, cleanupNsjailExecutor } from "./src/services/nsjailExecutor.js";
 import adminRouter from "./src/routes/admin.js";
 
+dotenv.config();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
+// Session secret — required in production, falls back to a clearly labeled dev secret otherwise
+const SESSION_SECRET = (() => {
+  if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET env var is required in production");
+  }
+  return "dev-secret-derit-local-only";
+})();
+
+// Feature flags — explicit, not implicit from NODE_ENV
+const ENABLE_SWAGGER = process.env.ENABLE_SWAGGER === "true" || process.env.NODE_ENV !== "production";
 
 const app = express({ limit: "5mb" });
 const PORT = process.env.PORT || 5001;
@@ -35,14 +48,26 @@ app.use(
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
+    exposedHeaders: ["X-Request-ID"],
   }),
 );
 
 app.set("trust proxy", 1);
 
-// Swagger UI (only in development)
-if (process.env.NODE_ENV !== "production") {
+// Request ID middleware for tracing and log correlation
+app.use((req, res, next) => {
+  const incoming = req.headers["x-request-id"];
+  req.id =
+    typeof incoming === "string" && incoming.length > 0 && incoming.length <= 64
+      ? incoming
+      : crypto.randomBytes(8).toString("hex");
+  res.setHeader("X-Request-ID", req.id);
+  next();
+});
+
+// Swagger UI (only when explicitly enabled)
+if (ENABLE_SWAGGER) {
   app.use(
     "/api-docs",
     swaggerUi.serve,
@@ -51,7 +76,7 @@ if (process.env.NODE_ENV !== "production") {
       customSiteTitle: "DERIT API Documentation",
     }),
   );
-  console.log("📚 Swagger UI available at /api-docs");
+  console.log("Swagger UI available at /api-docs");
 }
 
 // Serve static files (uploaded PDFs) with caching and CORS
@@ -76,13 +101,7 @@ app.use(
 
 app.use(
   session({
-    secret:
-      process.env.SESSION_SECRET ||
-      (() => {
-        if (process.env.NODE_ENV === "production")
-          throw new Error("SESSION_SECRET env var is required in production");
-        return "dev-secret-derit-local";
-      })(),
+    secret: SESSION_SECRET,
     store: MongoStore.create({
       mongoUrl: process.env.MONGODB_CONNECTIONSTRING + "derit-session-store",
     }),
@@ -129,6 +148,18 @@ app.use("/upload", uploadRouter);
 app.use("/classrooms", classroomRouter);
 app.use("/admin", adminRouter);
 
+// Centralised error handler — never leak stack traces to clients
+app.use((err, req, res, _next) => {
+  console.error(`[error][${req.id}] ${err.stack || err.message}`);
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === "production" ? "Internal Server Error" : err.message,
+    requestId: req.id,
+  });
+});
+
+// Store the HTTP server reference so we can close it gracefully
+let httpServer = null;
+
 connectDB().then(async () => {
   // Initialize nsjail executor workspace
   try {
@@ -138,12 +169,12 @@ connectDB().then(async () => {
     console.warn("nsjail executor init warning:", err.message);
   }
 
-  app.listen(PORT, () => {
+  httpServer = app.listen(PORT, () => {
     console.log(`server started at port: ${PORT}`);
   });
 });
 
-// Graceful shutdown
+// Graceful shutdown — closes HTTP server before destroying nsjail resources
 let isShuttingDown = false;
 const gracefulShutdown = async (signal) => {
   if (isShuttingDown) {
@@ -152,17 +183,20 @@ const gracefulShutdown = async (signal) => {
   }
   isShuttingDown = true;
 
-  // Print stack trace to see WHERE the signal came from
-  const stack = new Error("signal origin trace").stack;
-  console.log(`\n${signal} received. Cleaning up...\n${stack}`);
+  console.log(`${signal} received. Cleaning up...`);
 
-  // Set a timeout to force exit if cleanup takes too long
+  // Force-exit after 10s if cleanup hangs
   const forceExitTimer = setTimeout(() => {
     console.error("Cleanup timeout exceeded, forcing exit...");
     process.exit(1);
-  }, 10000); // 10 seconds max
+  }, 10_000);
 
   try {
+    if (httpServer) {
+      await new Promise((resolve) => httpServer.close(resolve));
+      console.log("HTTP server closed");
+    }
+
     await cleanupNsjailExecutor();
     console.log("nsjail executor cleaned up successfully");
 

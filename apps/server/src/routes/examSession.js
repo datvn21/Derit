@@ -7,6 +7,7 @@ import UserModel from "../models/User.js";
 import ClassroomModel from "../models/Classroom.js";
 import { isAuthenticated } from "../middleware/middlewareAuth.js";
 import { isLecturerOrAdmin } from "../middleware/isLecturerOrAdmin.js";
+import { normalizeEmails } from "../services/studentEmail.js";
 
 const examSessionRouter = Router();
 
@@ -149,18 +150,6 @@ examSessionRouter.post("/", isAuthenticated, isLecturerOrAdmin, async (req, res)
     }
 
     // Helper: Normalize student IDs to full emails
-    const normalizeEmails = (emails) =>
-      (emails || [])
-        .map((e) => {
-          const trimmed = e.trim();
-          if (!trimmed) return null;
-          return trimmed.includes("@")
-            ? trimmed
-            : `${trimmed}@student.tdtu.edu.vn`;
-        })
-        .filter(Boolean);
-
-    // Resolve classroom emails and merge with manual whitelist
     const newWhitelist = normalizeEmails(whitelist);
     const newBlacklist = normalizeEmails(blacklist);
 
@@ -745,18 +734,34 @@ const assignExamCodeAndCreateRecords = async (
     assignedCode = allCodes[randomIndex];
   }
 
-  const studentCode = await StudentExamCodeModel.create({
-    examSessionId: session._id,
-    studentId,
-    examCodeNumber: assignedCode.codeNumber,
-    computerOrder: computerOrder || null,
-  });
+  // Atomic upsert — guarantees no duplicate StudentExamCode for the same
+  // (examSession, student). Idempotent on concurrent client retries.
+  const studentCode = await StudentExamCodeModel.findOneAndUpdate(
+    { examSessionId: session._id, studentId },
+    {
+      $setOnInsert: {
+        examSessionId: session._id,
+        studentId,
+        examCodeNumber: assignedCode.codeNumber,
+        computerOrder: computerOrder || null,
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
 
-  await StudentSubmissionModel.create({
-    examSessionId: session._id,
-    studentId,
-    examCodeNumber: assignedCode.codeNumber,
-  });
+  // Idempotent submission creation — uses upsert + unique compound index.
+  await StudentSubmissionModel.updateOne(
+    { examSessionId: session._id, studentId },
+    {
+      $setOnInsert: {
+        examSessionId: session._id,
+        studentId,
+        examCodeNumber: studentCode.examCodeNumber,
+        submissions: [],
+      },
+    },
+    { upsert: true },
+  );
 
   return studentCode;
 };
@@ -827,18 +832,31 @@ examSessionRouter.post(
         );
         const assignedCode = template.examCodes[randomIndex];
 
-        studentCode = await StudentExamCodeModel.create({
-          examSessionId: session._id,
-          studentId: user._id,
-          examCodeNumber: assignedCode.codeNumber,
-        });
+      // Atomic upsert — same idempotency contract as the join path.
+      const studentCode = await StudentExamCodeModel.findOneAndUpdate(
+        { examSessionId: session._id, studentId: user._id },
+        {
+          $setOnInsert: {
+            examSessionId: session._id,
+            studentId: user._id,
+            examCodeNumber: assignedCode.codeNumber,
+          },
+        },
+        { upsert: true, new: true },
+      );
 
-        // Create submission record
-        await StudentSubmissionModel.create({
-          examSessionId: session._id,
-          studentId: user._id,
-          examCodeNumber: assignedCode.codeNumber,
-        });
+      await StudentSubmissionModel.updateOne(
+        { examSessionId: session._id, studentId: user._id },
+        {
+          $setOnInsert: {
+            examSessionId: session._id,
+            studentId: user._id,
+            examCodeNumber: studentCode.examCodeNumber,
+            submissions: [],
+          },
+        },
+        { upsert: true },
+      );
       }
 
       // Get the assigned exam code

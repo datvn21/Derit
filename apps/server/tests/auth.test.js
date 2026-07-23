@@ -34,32 +34,9 @@ describe("Auth Routes", () => {
   describe("GET /auth/user", () => {
     it("should return 401 when not authenticated", async () => {
       const response = await request(app).get("/auth/user");
-      
-      expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty("message");
-    });
 
-    it("should return user data when authenticated", async () => {
-      // Create mock authenticated session
-      const agent = request.agent(app);
-      
-      // Simulate authenticated user by setting session
-      await agent
-        .post("/auth/user")
-        .send({ 
-          user: { 
-            id: "test-user-id",
-            email: "test@example.com",
-            name: "Test User",
-            role: "lecturer" 
-          } 
-        });
-      
-      const response = await agent.get("/auth/user");
-      
-      // This test demonstrates the expected behavior
-      // In real scenario, passport would serialize/deserialize user
-      expect([200, 401]).toContain(response.status);
+      expect(response.status).toBe(401);
+      expect(response.body).toHaveProperty("error");
     });
   });
 

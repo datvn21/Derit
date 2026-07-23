@@ -155,13 +155,11 @@ describe("Submissions Routes", () => {
         examSessionId: sessionObj._id,
         studentId: student._id,
         examCodeNumber: 1,
-        questionSubmissions: [{
+        submissions: [{
           questionNumber: 1,
-          submissions: [{
-            code: "test code",
-            submittedAt: new Date(),
-            status: "pending",
-          }],
+          code: "test code",
+          submittedAt: new Date(),
+          status: "pending",
         }],
       });
     });
@@ -180,13 +178,11 @@ describe("Submissions Routes", () => {
         examSessionId: sessionObj._id,
         studentId: student._id,
         examCodeNumber: 1,
-        questionSubmissions: [{
+        submissions: [{
           questionNumber: 1,
-          submissions: [{
-            code: "test",
-            submittedAt: new Date(),
-            status: "pending",
-          }],
+          code: "test",
+          submittedAt: new Date(),
+          status: "pending",
         }],
       });
     });

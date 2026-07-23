@@ -1,0 +1,96 @@
+# GitHub Actions for Derit — server tests + web tests + E2E
+#
+# The pipeline is split into explicit stages so a failure in a low-fidelity
+# step (lint) fails fast. Sandbox tests and Playwright run only against the
+# primary branch to keep CI minutes bounded.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  server-unit:
+    name: Server — unit
+    runs-on: ubuntu-latest
+    working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run test:unit
+
+  server-integration:
+    name: Server — integration
+    runs-on: ubuntu-latest
+    needs: server-unit
+    working-directory: apps/server
+    services:
+      mongodb:
+        image: mongo:7
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      MONGODB_CONNECTIONSTRING: mongodb://localhost:27017/derit-test
+      SESSION_SECRET: ci-only-test-secret-not-prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run test:integration
+
+  web-typecheck:
+    name: Web — typecheck + build
+    runs-on: ubuntu-latest
+    working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  web-e2e:
+    name: Web — Playwright
+    runs-on: ubuntu-latest
+    needs: web-typecheck
+    working-directory: apps/web
+    services:
+      mongodb:
+        image: mongo:7
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      MONGODB_CONNECTIONSTRING: mongodb://mongodb:27017/derit-test
+      SESSION_SECRET: ci-only-test-secret-not-prod
+      NODE_ENV: development
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+        env:
+          E2E_BASE_URL: http://localhost:3000

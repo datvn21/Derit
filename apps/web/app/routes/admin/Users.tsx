@@ -20,6 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { Badge } from "~/components/ui/badge";
+import { PageLoading } from "~/components/ui/page-loading";
 import {
   Users,
   Search,
@@ -175,40 +177,32 @@ export default function AdminUsers() {
   };
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <PageLoading label="Loading users…" />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-8 py-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900 tracking-tight">User Management</h1>
-              <p className="text-sm text-gray-500 mt-0.5">
-                Manage all users in the system
-              </p>
-            </div>
-            <Button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2 text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Create User
-            </Button>
-          </div>
+    <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto w-full">
+      {/* Page heading */}
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">
+            User Management
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Manage all users in the system
+          </p>
         </div>
-      </div>
+        <Button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2 text-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Create User
+        </Button>
+      </header>
 
-      {/* Content */}
-      <main className="flex-1 max-w-7xl mx-auto px-8 w-full py-5 space-y-5">
-        {/* Filters */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+      {/* Filters */}
+      <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex flex-wrap gap-4">
             {/* Search */}
             <form onSubmit={handleSearch} className="flex-1 min-w-[200px]">
@@ -250,52 +244,52 @@ export default function AdminUsers() {
           </div>
         </div>
 
-        {/* Users Table */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Users Table */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : users.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <Users className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
               <p className="text-sm">No users found</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-muted border-b border-border">
                   <tr>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       User
                     </th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Role
                     </th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Last Login
                     </th>
-                    <th className="text-right px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-right px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border">
                   {users.map((u: any) => (
-                    <tr key={u._id} className="hover:bg-gray-50/50 transition">
+                    <tr key={u._id} className="hover:bg-muted/50 transition-[background-color] duration-(--motion-fast) ease-(--motion-ease)">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
+                          <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center text-accent-foreground text-sm font-medium">
                             {u.name.charAt(0)}
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{u.name}</p>
-                            <p className="text-xs text-gray-500">{u.email}</p>
+                            <p className="text-sm font-medium text-foreground">{u.name}</p>
+                            <p className="text-xs text-muted-foreground">{u.email}</p>
                             {u.studentId && (
-                              <p className="text-xs text-gray-400">ID: {u.studentId}</p>
+                              <p className="text-xs text-muted-foreground">ID: {u.studentId}</p>
                             )}
                           </div>
                         </div>
@@ -303,7 +297,7 @@ export default function AdminUsers() {
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2">
                           {u.role === "admin" ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-xs font-medium">
+                            <Badge variant="destructive">
                               {u.isSuperAdmin ? (
                                 <>
                                   <ShieldCheck className="w-3 h-3" /> Super Admin
@@ -313,30 +307,26 @@ export default function AdminUsers() {
                                   <Shield className="w-3 h-3" /> Admin
                                 </>
                               )}
-                            </span>
+                            </Badge>
                           ) : u.role === "lecturer" ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
-                              Lecturer
-                            </span>
+                            <Badge variant="info">Lecturer</Badge>
                           ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-medium">
-                              Student
-                            </span>
+                            <Badge variant="success">Student</Badge>
                           )}
                         </div>
                       </td>
                       <td className="px-5 py-3.5">
                         {u.isActive ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-medium">
+                          <Badge variant="success">
                             <UserCheck className="w-3 h-3" /> Active
-                          </span>
+                          </Badge>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+                          <Badge>
                             <UserX className="w-3 h-3" /> Inactive
-                          </span>
+                          </Badge>
                         )}
                       </td>
-                      <td className="px-5 py-3.5 text-sm text-gray-500">
+                      <td className="px-5 py-3.5 text-sm text-muted-foreground">
                         {u.lastLogin
                           ? new Date(u.lastLogin).toLocaleDateString()
                           : "Never"}
@@ -347,7 +337,7 @@ export default function AdminUsers() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleOpenEdit(u)}
-                            className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                            className="text-muted-foreground hover:text-primary hover:bg-accent"
                           >
                             <Edit2 className="w-4 h-4" />
                           </Button>
@@ -356,7 +346,7 @@ export default function AdminUsers() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleOpenDelete(u)}
-                              className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -372,8 +362,8 @@ export default function AdminUsers() {
 
           {/* Pagination */}
           {pagination.pages > 1 && (
-            <div className="flex items-center justify-between px-5 py-3.5 border-t border-gray-200 bg-gray-50">
-              <p className="text-sm text-gray-500">
+            <div className="flex items-center justify-between px-5 py-3.5 border-t border-border bg-muted">
+              <p className="text-sm text-muted-foreground">
                 Showing {(pagination.page - 1) * 15 + 1} to{" "}
                 {Math.min(pagination.page * 15, pagination.total)} of{" "}
                 {pagination.total} users
@@ -387,7 +377,7 @@ export default function AdminUsers() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   Page {pagination.page} of {pagination.pages}
                 </span>
                 <Button
@@ -402,7 +392,6 @@ export default function AdminUsers() {
             </div>
           )}
         </div>
-      </main>
 
       {/* Create User Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
@@ -573,11 +562,11 @@ export default function AdminUsers() {
             <DialogTitle>Delete User</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Are you sure you want to delete user{" "}
-              <strong>{selectedUser?.name}</strong> ({selectedUser?.email})?
+              <strong className="text-foreground">{selectedUser?.name}</strong> ({selectedUser?.email})?
             </p>
-            <p className="text-sm text-red-500 mt-2">
+            <p className="text-sm text-destructive mt-2">
               This action cannot be undone.
             </p>
           </div>

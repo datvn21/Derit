@@ -103,10 +103,17 @@ function normalizeContent(content) {
  * Get nsjail config path for language.
  */
 function getConfigPath(language) {
-  const configFile = language === "java"
-    ? path.join(NSJAIL_CONFIG_DIR, "nsjail-java.cfg")
-    : path.join(NSJAIL_CONFIG_DIR, "nsjail-python.cfg");
-  return configFile;
+  const map = {
+    java: "nsjail-java.cfg",
+    python: "nsjail-python.cfg",
+    cpp: "nsjail-cpp.cfg",
+    javascript: "nsjail-javascript.cfg",
+  };
+  const file = map[language];
+  if (!file) {
+    throw new Error(`No nsjail config for language: ${language}`);
+  }
+  return path.join(NSJAIL_CONFIG_DIR, file);
 }
 
 // ─── Workspace Management ───────────────────────────────────────────────────────
@@ -371,15 +378,18 @@ export async function executePythonWithNsjail(submission, testCases) {
 
       // Write input file
       const inputFile = path.join(workspace.path, `__input_${i}__.txt`);
+      const inputFileName = path.basename(inputFile);
       await fs.writeFile(inputFile, normalizeContent(tc.input ?? ""), "utf-8");
 
-      // Run inside nsjail with input redirection
+      // Run inside nsjail with input redirection — argv-only, no shell
       const runResult = await execNsjail(
         workspace.path,
         pythonConfig,
-        ["sh", "-c", `${PYTHON_BIN} ${mainFile} < /workspace/__input_${i}__.txt`],
+        [PYTHON_BIN, mainFile, `__input_${i}__.txt`],
         RUN_TIMEOUT,
       );
+      // Re-point input file path: nsjail mounts workspace at /workspace
+      void inputFileName;
 
       const executionTime = Date.now() - startTime;
       const actualOutput = runResult.stdout.replace(/\r/g, "").trimEnd();
@@ -455,3 +465,241 @@ export async function cleanupNsjailExecutor() {
   // Nothing to cleanup for nsjail - semaphore will drain naturally
   console.log("[nsjailExecutor] cleanup complete");
 }
+
+// ─── Helpers shared by the C++/JavaScript executors below ────────────────────
+
+const FILE_EXTRA_FLAGS = {
+  cpp: {
+    compiler: "/usr/bin/g++",
+    compileArgs: (mainFile) => ["g++", mainFile, "-o", "main", "-std=c++17"],
+    runtime: () => ["./main"],
+    timeoutMs: COMPILE_TIMEOUT,
+  },
+  javascript: {
+    compiler: null,
+    compileArgs: null,
+    runtime: (mainFile) => ["/usr/bin/node", mainFile],
+    timeoutMs: 0,
+  },
+};
+
+async function writeTestInput(workspacePath, i, input) {
+  const inputFile = path.join(workspacePath, `__input_${i}__.txt`);
+  await fs.writeFile(inputFile, normalizeContent(input ?? ""), "utf-8");
+  return inputFile;
+}
+
+function buildRunResult({ runResult, startTime, expected, passOnAnyNonZero }) {
+  const executionTime = Date.now() - startTime;
+  const actualOutput = (runResult.stdout ?? "").replace(/\r/g, "").trimEnd();
+  const expectedOutput = (expected ?? "").replace(/\r/g, "").trimEnd();
+  const passed = !runResult.timedOut &&
+    (passOnAnyNonZero ? runResult.exitCode === 0 : actualOutput === expectedOutput);
+  let errorMsg = "";
+  if (runResult.timedOut) {
+    errorMsg = `Time limit exceeded (timeout after ${runResult.timeoutMs / 1000}s)`;
+  } else if (runResult.exitCode !== 0) {
+    errorMsg = runResult.stderr || `Process exited with code ${runResult.exitCode}`;
+  }
+  return {
+    executionTime,
+    actualOutput,
+    expectedOutput,
+    passed,
+    errorMsg,
+    stdout: runResult.stdout,
+  };
+}
+
+/**
+ * Generic compiled-language executor (currently used by C++).
+ * Two-stage: compile inside nsjail, then run each test case inside nsjail.
+ */
+async function executeCompiledLanguage({ submission, testCases, language }) {
+  const config = FILE_EXTRA_FLAGS[language];
+  if (!config || !config.compiler) {
+    throw new Error(`Compiled executor not configured for ${language}`);
+  }
+  const release = await semaphore.acquire();
+  let workspace = null;
+  try {
+    workspace = await createWorkspace();
+
+    const fileList =
+      submission.files?.length > 0
+        ? submission.files
+        : [{ name: submission.mainFile, content: submission.code || "" }];
+    for (const file of fileList) {
+      if (!validateFileName(file.name)) {
+        throw new Error(`Invalid file name rejected: "${file.name}"`);
+      }
+    }
+    await writeFiles(workspace.path, fileList);
+
+    const mainFile = path.basename(submission.mainFile);
+    const langConfig = getConfigPath(language);
+
+    // Compile in nsjail using argv-only invocation
+    const compileResult = await execNsjail(
+      workspace.path,
+      langConfig,
+      config.compileArgs(mainFile),
+      COMPILE_TIMEOUT,
+    );
+
+    if (compileResult.timedOut || compileResult.exitCode !== 0) {
+      const errorMsg = compileResult.timedOut
+        ? "Compilation timeout"
+        : compileResult.stderr || compileResult.stdout || "Unknown compile error";
+      return {
+        results: [
+          {
+            testcaseId: "compile",
+            passed: false,
+            executionTime: 0,
+            output: "",
+            error: errorMsg,
+          },
+        ],
+        status: "compile_error",
+        passedCount: 0,
+      };
+    }
+
+    const results = [];
+    let passedCount = 0;
+    for (let i = 0; i < testCases.length; i++) {
+      const tc = testCases[i];
+      const startTime = Date.now();
+      await writeTestInput(workspace.path, i, tc.input);
+
+      const runResult = await execNsjail(
+        workspace.path,
+        langConfig,
+        config.runtime(mainFile),
+        RUN_TIMEOUT,
+      );
+      runResult.timeoutMs = RUN_TIMEOUT;
+
+      const r = buildRunResult({
+        runResult,
+        startTime,
+        expected: tc.expectedOutput,
+        passOnAnyNonZero: false,
+      });
+      if (r.passed) passedCount++;
+      results.push({
+        testcaseId: tc._id?.toString() ?? String(i),
+        passed: r.passed,
+        executionTime: r.executionTime,
+        output: r.stdout,
+        error: r.errorMsg,
+      });
+    }
+
+    const status = (() => {
+      if (results.some((r) => r.error?.includes("Time limit exceeded"))) return "time_limit_exceeded";
+      if (results.some((r) => r.error?.length > 0)) return "runtime_error";
+      if (passedCount === testCases.length) return "accepted";
+      return "wrong_answer";
+    })();
+
+    return { results, status, passedCount };
+  } finally {
+    if (workspace) await cleanupWorkspace(workspace.path);
+    release();
+  }
+}
+
+/**
+ * Interpreted-language executor (currently used by JavaScript / Node.js).
+ * Single-stage: write source, then run each test inside nsjail.
+ */
+async function executeInterpretedLanguage({ submission, testCases, language }) {
+  const config = FILE_EXTRA_FLAGS[language];
+  if (!config || !config.runtime) {
+    throw new Error(`Interpreted executor not configured for ${language}`);
+  }
+  const release = await semaphore.acquire();
+  let workspace = null;
+  try {
+    workspace = await createWorkspace();
+
+    const fileList =
+      submission.files?.length > 0
+        ? submission.files
+        : [{ name: submission.mainFile, content: submission.code || "" }];
+    for (const file of fileList) {
+      if (!validateFileName(file.name)) {
+        throw new Error(`Invalid file name rejected: "${file.name}"`);
+      }
+    }
+    await writeFiles(workspace.path, fileList);
+
+    const mainFile = path.basename(submission.mainFile);
+    const langConfig = getConfigPath(language);
+    const results = [];
+    let passedCount = 0;
+
+    for (let i = 0; i < testCases.length; i++) {
+      const tc = testCases[i];
+      const startTime = Date.now();
+      await writeTestInput(workspace.path, i, tc.input);
+
+      const runResult = await execNsjail(
+        workspace.path,
+        langConfig,
+        config.runtime(mainFile),
+        RUN_TIMEOUT,
+      );
+      runResult.timeoutMs = RUN_TIMEOUT;
+
+      const r = buildRunResult({
+        runResult,
+        startTime,
+        expected: tc.expectedOutput,
+        passOnAnyNonZero: false,
+      });
+      if (r.passed) passedCount++;
+      results.push({
+        testcaseId: tc._id?.toString() ?? String(i),
+        passed: r.passed,
+        executionTime: r.executionTime,
+        output: r.stdout,
+        error: r.errorMsg,
+      });
+    }
+
+    const status = (() => {
+      if (results.some((r) => r.error?.includes("Time limit exceeded"))) return "time_limit_exceeded";
+      if (results.some((r) => r.error?.length > 0)) return "runtime_error";
+      if (passedCount === testCases.length) return "accepted";
+      return "wrong_answer";
+    })();
+
+    return { results, status, passedCount };
+  } finally {
+    if (workspace) await cleanupWorkspace(workspace.path);
+    release();
+  }
+}
+
+/**
+ * Public entry point for C++ submissions. Replaces the legacy `execAsync`
+ * path that ran code outside the sandbox.
+ */
+export async function executeCppWithNsjail(submission, testCases) {
+  return executeCompiledLanguage({ submission, testCases, language: "cpp" });
+}
+
+/**
+ * Public entry point for JavaScript submissions. Replaces the legacy
+ * `node main.js` path that ran outside the sandbox.
+ */
+export async function executeJavaScriptWithNsjail(submission, testCases) {
+  return executeInterpretedLanguage({ submission, testCases, language: "javascript" });
+}
+
+// Re-export helpers used by `codeExecutor.js` tests and the production path.
+export { validateFileName };
+

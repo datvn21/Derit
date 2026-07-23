@@ -1,34 +1,27 @@
 import { test, expect } from "@playwright/test";
 
+/**
+ * E2E tests for the student exam surface. These currently only validate
+ * the unauthenticated redirect flow because there's no test fixture that
+ * provisions a real student session. See the `verifications/characterization`
+ * readme for how to enable the full student journey once a GoTrue fixture
+ * exists.
+ */
 test.describe("Student Exam Flow", () => {
-  test.beforeEach(async ({ page }) => {
-    // Note: These tests require authenticated session
-    // In a real setup, you would use storageState or API to authenticate
+  test("redirects unauthenticated visitors away from /student", async ({ page }) => {
+    const response = await page.goto("/student");
+    // We accept either a 200 (rendered login) or a 3xx redirect, but the
+    // final URL must not be the protected route.
+    if (response) expect(response.status()).toBeLessThan(400);
+    await page.waitForLoadState("networkidle");
+    await expect(page).not.toHaveURL(/\/student($|\/)/);
   });
 
-  test("should display available exams", async ({ page }) => {
-    // Navigate to student dashboard
-    await page.goto("/student");
-    
-    // Should show available sessions or loading state
-    await expect(
-      page.getByText(/available exams/i).or(page.getByText(/loading/i))
-    ).toBeVisible({ timeout: 5000 });
-  });
-
-  test("should search for exam by room code", async ({ page }) => {
-    await page.goto("/student");
-    
-    // Look for room code input
-    const roomCodeInput = page.getByPlaceholder(/room code/i);
-    if (await roomCodeInput.isVisible()) {
-      await roomCodeInput.fill("TESTROOM");
-      await page.getByRole("button", { name: /search|find/i }).click();
-    }
-    
-    // Should show search result or error
-    await expect(
-      page.getByText(/not found/i).or(page.getByText(/session found/i))
-    ).toBeVisible({ timeout: 3000 });
+  test("redirects unauthenticated visitors away from /student/exam/:id", async ({
+    page,
+  }) => {
+    await page.goto("/student/exam/some-fake-id");
+    await page.waitForLoadState("networkidle");
+    await expect(page).not.toHaveURL(/\/student\/exam\//);
   });
 });

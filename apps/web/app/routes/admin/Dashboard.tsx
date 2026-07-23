@@ -3,7 +3,9 @@ import { useNavigate, Link } from "react-router";
 import { useUserStore } from "~/stores/userStore";
 import { authAPI, adminAPI } from "~/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { Users, UserCheck, UserX, Activity, Clock } from "lucide-react";
+import { Users, UserCheck, Activity, Clock } from "lucide-react";
+import { PageLoading } from "~/components/ui/page-loading";
+import { StatCard } from "~/components/ui/stat-card";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -26,7 +28,7 @@ export default function AdminDashboard() {
   }, [navigate, setUser]);
 
   // Fetch stats
-  const { data: statsData, isLoading: isLoadingStats } = useQuery({
+  const { data: statsData } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: () => adminAPI.getStats(),
     enabled: !!user,
@@ -40,21 +42,14 @@ export default function AdminDashboard() {
   });
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-500">Loading...</p>
-        </div>
-      </div>
-    );
+    return <PageLoading label="Loading admin dashboard…" />;
   }
 
   const stats = statsData?.data;
   const logs = logsData?.data?.logs || [];
 
   // Process user stats
-  const userStatsMap = {};
+  const userStatsMap: Record<string, number> = {};
   let totalUsers = 0;
   let activeUsers = 0;
   if (stats?.users) {
@@ -70,162 +65,119 @@ export default function AdminDashboard() {
   const adminCount = userStatsMap["admin"] || 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Admin Dashboard</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Welcome back, {user.name}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-400">
-              <Clock className="w-4 h-4" />
-              {new Date().toLocaleDateString("en-US", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </div>
-          </div>
+    <div className="flex flex-col gap-8 p-6 max-w-7xl mx-auto w-full">
+      {/* Page heading */}
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+            Admin Dashboard
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Welcome back, {user.name}
+          </p>
         </div>
-      </div>
-
-      {/* Content */}
-      <main className="flex-1 max-w-7xl mx-auto px-8 w-full py-8 space-y-8">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-          {/* Total Users */}
-          <div className="bg-white rounded-lg border border-gray-200 p-5 hover:border-gray-300 transition-colors">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <Users className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-2xl font-semibold text-gray-900 tracking-tight">{totalUsers}</h3>
-              <p className="text-sm text-gray-500">Total Users</p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-gray-100">
-              <div className="flex justify-between text-xs text-gray-400">
-                <span>{studentCount} Students</span>
-                <span>{lecturerCount} Lecturers</span>
-                <span>{adminCount} Admins</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Students */}
-          <div className="bg-white rounded-lg border border-gray-200 p-5 hover:border-gray-300 transition-colors">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-green-50 rounded-lg">
-                <UserCheck className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-2xl font-semibold text-gray-900 tracking-tight">{studentCount}</h3>
-              <p className="text-sm text-gray-500">Students</p>
-            </div>
-            <div className="mt-4">
-              <Link
-                to="/admin/users?role=student"
-                className="text-sm font-medium text-blue-600 hover:text-blue-700"
-              >
-                Manage Students →
-              </Link>
-            </div>
-          </div>
-
-          {/* Lecturers */}
-          <div className="bg-white rounded-lg border border-gray-200 p-5 hover:border-gray-300 transition-colors">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-purple-50 rounded-lg">
-                <Users className="w-5 h-5 text-purple-600" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-2xl font-semibold text-gray-900 tracking-tight">{lecturerCount}</h3>
-              <p className="text-sm text-gray-500">Lecturers</p>
-            </div>
-            <div className="mt-4">
-              <Link
-                to="/admin/users?role=lecturer"
-                className="text-sm font-medium text-blue-600 hover:text-blue-700"
-              >
-                Manage Lecturers →
-              </Link>
-            </div>
-          </div>
-
-          {/* Recent Logins */}
-          <div className="bg-white rounded-lg border border-gray-200 p-5 hover:border-gray-300 transition-colors">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-orange-50 rounded-lg">
-                <Activity className="w-5 h-5 text-orange-600" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-2xl font-semibold text-gray-900 tracking-tight">
-                {stats?.recentLogins || 0}
-              </h3>
-              <p className="text-sm text-gray-500">Active (7 days)</p>
-            </div>
-            <div className="mt-4">
-              <Link
-                to="/admin/logs"
-                className="text-sm font-medium text-blue-600 hover:text-blue-700"
-              >
-                View Activity →
-              </Link>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock className="w-4 h-4" />
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
         </div>
+      </header>
 
-        {/* Quick Actions & Recent Activity */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      {/* Stats Grid */}
+      <section
+        aria-label="Key stats"
+        className="grid grid-cols-1 md:grid-cols-4 gap-5"
+      >
+          <StatCard
+            icon={Users}
+            label="Total Users"
+            value={totalUsers}
+            badge="All roles"
+            hint={`${studentCount} Students · ${lecturerCount} Lecturers · ${adminCount} Admins`}
+          />
+          <StatCard
+            icon={UserCheck}
+            label="Students"
+            value={studentCount}
+            ctaLabel="Manage"
+            ctaHref="/admin/users?role=student"
+          />
+          <StatCard
+            icon={Users}
+            label="Lecturers"
+            value={lecturerCount}
+            variant="muted"
+            ctaLabel="Manage"
+            ctaHref="/admin/users?role=lecturer"
+          />
+          <StatCard
+            icon={Activity}
+            label="Active (7 days)"
+            value={stats?.recentLogins || 0}
+            badge="Engagement"
+            ctaLabel="View activity"
+            ctaHref="/admin/logs"
+          />
+      </section>
+
+      {/* Quick Actions & Recent Activity */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Quick Actions */}
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <h3 className="text-base font-semibold text-gray-900 mb-4">Quick Actions</h3>
+          <div className="rounded-lg border border-border bg-card p-5">
+            <h3 className="text-base font-semibold text-foreground mb-4">
+              Quick Actions
+            </h3>
             <div className="space-y-2">
               <Link
                 to="/admin/users"
-                className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition"
+                className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-[background-color] duration-(--motion-fast) ease-(--motion-ease)"
               >
-                <Users className="w-4 h-4 text-gray-400" />
+                <Users className="w-4 h-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Manage Users</p>
-                  <p className="text-xs text-gray-500">View and edit user accounts</p>
+                  <p className="text-sm font-medium text-foreground">
+                    Manage Users
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    View and edit user accounts
+                  </p>
                 </div>
               </Link>
               <Link
                 to="/admin/settings"
-                className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition"
+                className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-[background-color] duration-(--motion-fast) ease-(--motion-ease)"
               >
-                <Activity className="w-4 h-4 text-gray-400" />
+                <Activity className="w-4 h-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium text-gray-900">System Settings</p>
-                  <p className="text-xs text-gray-500">Configure system preferences</p>
+                  <p className="text-sm font-medium text-foreground">
+                    System Settings
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Configure system preferences
+                  </p>
                 </div>
               </Link>
             </div>
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
+          <div className="rounded-lg border border-border bg-card p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-gray-900">Recent Activity</h3>
+              <h3 className="text-base font-semibold text-foreground">
+                Recent Activity
+              </h3>
               <Link
                 to="/admin/logs"
-                className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                className="text-sm font-medium text-primary hover:text-primary-hover"
               >
                 View All →
               </Link>
             </div>
             {logs.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 text-sm">
+              <div className="text-center py-8 text-muted-foreground text-sm">
                 No recent activity
               </div>
             ) : (
@@ -233,20 +185,22 @@ export default function AdminDashboard() {
                 {logs.slice(0, 5).map((log: any) => (
                   <div
                     key={log._id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                      <div className="w-8 h-8 rounded-full bg-background flex items-center justify-center text-xs font-medium text-muted-foreground border border-border">
                         {log.userId?.name?.charAt(0) || "?"}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-foreground">
                           {log.userId?.name || "Unknown"}
                         </p>
-                        <p className="text-xs text-gray-500">{log.activityType}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {log.activityType}
+                        </p>
                       </div>
                     </div>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-muted-foreground">
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </span>
                   </div>
@@ -255,7 +209,6 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
-      </main>
     </div>
   );
 }

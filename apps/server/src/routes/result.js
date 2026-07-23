@@ -1,6 +1,7 @@
 import { Router } from "express";
 import ResultModel from "../models/Result.js";
 import ExamSessionModel from "../models/ExamSession.js";
+import UserModel from "../models/User.js";
 import { isAuthenticated } from "../middleware/middlewareAuth.js";
 import { isLecturerOrAdmin } from "../middleware/isLecturerOrAdmin.js";
 

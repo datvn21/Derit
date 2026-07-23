@@ -10,6 +10,7 @@ import { isLecturerOrAdmin } from "../middleware/isLecturerOrAdmin.js";
 import { executeCodeLocally } from "../services/codeExecutor.js";
 import { notifySessionUpdate } from "./examSession.js";
 import { logActivity } from "../services/activityLogger.js";
+import { BoundedCache, KeyedRateLimiter } from "../services/bounded.js";
 
 // Normalize CRLF → LF in file content so Java compiler on Linux never sees \r
 function normalizeFiles(files) {
@@ -26,44 +27,55 @@ function normalizeCode(code) {
 
 const submissionRouter = Router();
 
-// ─── G: In-memory rate limiter for /run-console ─────────────────────────────────
-const runConsoleRateMap = new Map(); // userId → { count, resetAt }
-const RUN_CONSOLE_LIMIT = 3;        // max requests
-const RUN_CONSOLE_WINDOW_MS = 10_000; // per 10 seconds
+// ─── G: Bounded in-memory rate limiter for /run-console ────────────────────────
+// Production deployments should swap this for a Redis-backed limiter
+// shared between processes.
+const runConsoleRateLimiter = new KeyedRateLimiter({
+  limit: 3,            // max requests per user per window
+  windowMs: 10_000,    // 10 seconds
+  maxEntries: 5000,
+});
 
 function runConsoleLimiter(req, res, next) {
   const userId = req.user?.id;
   if (!userId) return next();
-  const now = Date.now();
-  const entry = runConsoleRateMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    runConsoleRateMap.set(userId, { count: 1, resetAt: now + RUN_CONSOLE_WINDOW_MS });
-    return next();
-  }
-  if (entry.count >= RUN_CONSOLE_LIMIT) {
-    const waitSec = Math.ceil((entry.resetAt - now) / 1000);
+  const r = runConsoleRateLimiter.hit(userId);
+  res.setHeader("X-RateLimit-Limit", "3");
+  res.setHeader("X-RateLimit-Remaining", String(r.remaining));
+  if (!r.allowed) {
+    const waitSec = Math.ceil(r.retryAfterMs / 1000);
     return res.status(429).json({
       error: `Too many run requests. Please wait ${waitSec}s before trying again.`,
     });
   }
-  entry.count++;
-  next();
+  return next();
 }
 
-// ─── B: SSE infrastructure for push-based result delivery ──────────────────────
+// ─── B: Bounded SSE infrastructure for push-based result delivery ───────────────
 // Key format: `${submissionId}:${questionNumber}[:${testCaseIndex}]`
+const SUBMISSION_SSE_MAX_KEYS = 2000;
 const submissionSSEMap = new Map();    // key → Set<res>
-const submissionResultCache = new Map(); // key → serialised result (kept 60s)
+const submissionResultCache = new BoundedCache({ maxEntries: 2000, ttlMs: 60_000 });
 
 function sseKey(submissionId, questionNumber, testCaseIndex) {
   const base = `${submissionId}:${questionNumber}`;
   return testCaseIndex !== undefined ? `${base}:${testCaseIndex}` : base;
 }
 
+function registerSSEClient(key, res) {
+  if (!submissionSSEMap.has(key)) submissionSSEMap.set(key, new Set());
+  submissionSSEMap.get(key).add(res);
+}
+
+function removeSSEClient(key, res) {
+  const set = submissionSSEMap.get(key);
+  if (!set) return;
+  set.delete(res);
+  if (set.size === 0) submissionSSEMap.delete(key);
+}
+
 function emitSSEResult(key, data) {
-  // Cache for 60s so late-connecting EventSource clients get immediate response
   submissionResultCache.set(key, data);
-  setTimeout(() => submissionResultCache.delete(key), 60_000);
 
   const clients = submissionSSEMap.get(key);
   if (!clients) return;
@@ -516,23 +528,25 @@ submissionRouter.get("/:id/events", isAuthenticated, (req, res) => {
   res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
 
-  if (!submissionSSEMap.has(key)) submissionSSEMap.set(key, new Set());
+  if (!submissionSSEMap.has(key)) {
+    if (submissionSSEMap.size >= SUBMISSION_SSE_MAX_KEYS) {
+      // Drop the oldest entry to keep memory bounded.
+      const oldestKey = submissionSSEMap.keys().next().value;
+      const oldestSet = submissionSSEMap.get(oldestKey);
+      if (oldestSet) for (const r of oldestSet) try { r.end(); } catch (_) {}
+      submissionSSEMap.delete(oldestKey);
+    }
+    submissionSSEMap.set(key, new Set());
+  }
   submissionSSEMap.get(key).add(res);
 
-  // Cleanup on client disconnect
-  req.on("close", () => {
-    const clients = submissionSSEMap.get(key);
-    if (clients) {
-      clients.delete(res);
-      if (clients.size === 0) submissionSSEMap.delete(key);
-    }
-  });
+  // Cleanup on client disconnect — uses the helper so the map stays consistent.
+  req.on("close", () => removeSSEClient(key, res));
 
   // Safety timeout: 2 minutes
   const guard = setTimeout(() => {
     try { res.end(); } catch (_) {}
-    const clients = submissionSSEMap.get(key);
-    if (clients) { clients.delete(res); }
+    removeSSEClient(key, res);
   }, 120_000);
   req.on("close", () => clearTimeout(guard));
 });
@@ -1160,10 +1174,11 @@ submissionRouter.post(
   },
 );
 
+const REGRADE_SSE_MAX_KEYS = 500;
 // ─── REGRADE: SSE infrastructure ─────────────────────────────────────────────
 // Stores SSE response objects keyed by sessionId
 const regradeSSEMap = new Map();    // sessionId → Set<res>
-const regradeResultCache = new Map(); // sessionId → final event (kept 60s)
+const regradeResultCache = new BoundedCache({ maxEntries: 500, ttlMs: 60_000 }); // sessionId → final event (kept 60s)
 
 function emitRegradeEvent(sessionId, data) {
   const key = sessionId.toString();
@@ -1171,7 +1186,6 @@ function emitRegradeEvent(sessionId, data) {
   // Cache the final event so late-connecting SSE clients get it immediately
   if (data.type === "done" || data.type === "error") {
     regradeResultCache.set(key, data);
-    setTimeout(() => regradeResultCache.delete(key), 60_000);
   }
 
   const clients = regradeSSEMap.get(key);
@@ -1212,7 +1226,17 @@ submissionRouter.get(
         return;
       }
 
-      if (!regradeSSEMap.has(sessionId)) regradeSSEMap.set(sessionId, new Set());
+      // Bound the SSE map to prevent memory exhaustion attacks.
+      if (!regradeSSEMap.has(sessionId)) {
+        if (regradeSSEMap.size >= REGRADE_SSE_MAX_KEYS) {
+          // Drop the oldest entry to make room
+          const oldest = regradeSSEMap.keys().next().value;
+          const oldestSet = regradeSSEMap.get(oldest);
+          if (oldestSet) for (const r of oldestSet) try { r.end(); } catch (_) {}
+          regradeSSEMap.delete(oldest);
+        }
+        regradeSSEMap.set(sessionId, new Set());
+      }
       regradeSSEMap.get(sessionId).add(res);
 
       req.on("close", () => {

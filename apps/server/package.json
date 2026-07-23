@@ -6,8 +6,11 @@
   "type": "module",
   "scripts": {
     "test": "NODE_ENV=test jest --runInBand --forceExit",
+    "test:unit": "node tests/unit-runner.mjs && node tests/policy-runner.mjs",
+    "test:integration": "NODE_ENV=test jest --runInBand --forceExit",
     "test:watch": "NODE_ENV=test jest --watch",
     "test:coverage": "NODE_ENV=test jest --coverage",
+    "test:all": "npm run test:unit && npm run test:integration",
     "start": "node index.js",
     "dev": "nodemon index.js"
   },

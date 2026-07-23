@@ -91,3 +91,4 @@ skills-lock.json
 # ===========================================
 *.tsbuildinfo
 .eslintcache
+.hallmark

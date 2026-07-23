@@ -78,6 +78,8 @@ activityLogSchema.index({ examSessionId: 1, userId: 1, timestamp: 1 });
 activityLogSchema.index({ examSessionId: 1, timestamp: 1 });
 activityLogSchema.index({ activityType: 1, timestamp: -1 });
 activityLogSchema.index({ timestamp: -1 });
+// Admin user→activity→time pagination queries
+activityLogSchema.index({ userId: 1, activityType: 1, timestamp: -1 });
 
 const ActivityLogModel =
   mongoose.models.ActivityLog ||

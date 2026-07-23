@@ -1,7 +1,19 @@
 {
-  "packages": [
+  "name": "derit",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Derit monorepo",
+  "workspaces": [
     "apps/*",
     "services/*",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "test:unit": "npm --workspace apps/server run test:unit",
+    "test:integration": "npm --workspace apps/server run test:integration",
+    "test:web": "npm --workspace apps/web run test",
+    "test:e2e": "npm --workspace apps/web run test:e2e",
+    "test:all": "npm run test:unit && npm run test:integration",
+    "typecheck:web": "npm --workspace apps/web run typecheck"
+  }
 }
