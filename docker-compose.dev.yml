@@ -1,0 +1,47 @@
+services:
+  mongodb:
+    volumes:
+      - mongodb_dev_data:/data/db
+
+  server:
+    build:
+      context: ./apps/server
+      dockerfile: Dockerfile.dev
+    image: derit-server:dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongodb:27017/derit
+    env_file:
+      - ./apps/server/.env
+    volumes:
+      - ./apps/server:/app
+      - /app/node_modules
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    command: nodemon index.js
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    image: derit-web:dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    depends_on:
+      - server
+    command: npm run dev
+
+volumes:
+  mongodb_dev_data:
+
+networks:
+  derit-network:
+    name: derit-dev-network

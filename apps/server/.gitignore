@@ -1,0 +1,6 @@
+node_modules
+npm-lock.yaml
+.env
+.dev.env
+temp/*
+uploads/

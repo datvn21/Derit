@@ -1,0 +1,30 @@
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=derit
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  java-compiler:
+    build:
+      context: ./services/java-compiler
+      dockerfile: Dockerfile
+    image: derit-java-compiler:latest
+    networks:
+      - none
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+
+networks:
+  derit-network:
+    driver: bridge

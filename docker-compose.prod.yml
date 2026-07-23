@@ -1,0 +1,52 @@
+services:
+  mongodb:
+    restart: unless-stopped
+    volumes:
+      - mongodb_prod_data:/data/db
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  server:
+    build:
+      context: ./apps/server
+      dockerfile: Dockerfile
+    image: derit-server:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/derit
+    env_file:
+      - ./apps/server/.env
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    image: derit-web:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - VITE_API_URL=http://server:3000
+    restart: unless-stopped
+    depends_on:
+      - server
+
+volumes:
+  mongodb_prod_data:
+
+networks:
+  derit-network:
+    name: derit-prod-network
