@@ -1,6 +1,7 @@
 import { Router } from "express";
 import passport from "passport";
 import UserModel from "../models/User.js";
+import AdminSettingsModel from "../models/AdminSettings.js";
 import ActivityLogModel from "../models/ActivityLog.js";
 import dotenv from "dotenv";
 dotenv.config();
@@ -19,6 +20,29 @@ async function logActivity(userId, activityType, details = {}, req) {
     console.error("Error logging activity:", error);
   }
 }
+
+/**
+ * Check if system needs initial setup (no admin exists)
+ * GET /auth/check-setup
+ */
+authRouter.get("/check-setup", async (req, res) => {
+  try {
+    const [adminCount, settings] = await Promise.all([
+      UserModel.countDocuments({ role: "admin" }),
+      AdminSettingsModel.getSettings(),
+    ]);
+
+    res.json({
+      needsSetup: adminCount === 0,
+      adminCount,
+      superAdminCount: await UserModel.countDocuments({ isSuperAdmin: true }),
+      allowedDomains: settings.allowedStudentDomains || [],
+      studentRegistrationAllowed: settings.allowStudentRegistration !== false,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 /**
  * @swagger
@@ -50,25 +74,37 @@ async function logActivity(userId, activityType, details = {}, req) {
  */
 authRouter.get("/user", async (req, res) => {
   try {
-    if (req.isAuthenticated()) {
-      const user = await UserModel.findOne({ googleId: req.user.id });
-
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
+    if (req.isAuthenticated() && req.user) {
+      // req.user is now the MongoDB document from deserializeUser
       res.json({
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        avatar: user.avatar,
-        role: user.role,
-        studentId: user.studentId,
-        isActive: user.isActive,
+        id: req.user._id,
+        email: req.user.email,
+        name: req.user.name,
+        avatar: req.user.avatar,
+        role: req.user.role,
+        studentId: req.user.studentId,
+        isActive: req.user.isActive,
+        isSuperAdmin: req.user.isSuperAdmin,
       });
     } else {
       res.status(401).json({ error: "Not authenticated" });
     }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Get allowed student domains (public endpoint)
+ * GET /auth/allowed-domains
+ */
+authRouter.get("/allowed-domains", async (req, res) => {
+  try {
+    const settings = await AdminSettingsModel.getSettings();
+    res.json({
+      allowedDomains: settings.allowedStudentDomains || [],
+      studentRegistrationAllowed: settings.allowStudentRegistration !== false,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -149,18 +185,30 @@ authRouter.get(
       const emailDomain = email.split("@")[1];
       const emailPrefix = email.split("@")[0];
 
+      // Get admin settings for allowed domains
+      const settings = await AdminSettingsModel.getSettings();
+      const allowedDomains = settings.allowedStudentDomains || [];
+      const studentRegistrationAllowed = settings.allowStudentRegistration !== false;
+
+      // Check if student domain is allowed
+      const isStudentDomain = allowedDomains.includes(emailDomain);
+
       // Determine role based on email domain
       let role = null;
       let studentId = null;
 
-      if (emailDomain === "student.tdtu.edu.vn") {
-        // Only students must use @student.tdtu.edu.vn
+      if (isStudentDomain) {
+        // Only students with allowed domains
         role = "student";
         studentId = emailPrefix;
       } else {
         // Any other email can be lecturer (including @gmail.com, @tdtu.edu.vn, etc.)
         role = "lecturer";
       }
+
+      // Check if system needs setup (no admin exists)
+      const adminCount = await UserModel.countDocuments({ role: "admin" });
+      const needsSetup = adminCount === 0;
 
       // Find user by googleId first, then by email (for pre-created accounts)
       let user = await UserModel.findOne({ googleId: req.user.id });
@@ -171,8 +219,21 @@ authRouter.get(
       }
 
       if (!user) {
-        // User doesn't exist - only auto-create student accounts
+        // User doesn't exist
         if (role === "student") {
+          // Check if student registration is allowed
+          if (!studentRegistrationAllowed) {
+            req.logout(() => {
+              req.session.destroy(() => {
+                res.redirect(
+                  process.env.FRONTEND_URL + "/?error=student_registration_disabled",
+                );
+              });
+            });
+            return;
+          }
+
+          // Auto-create student accounts
           user = await UserModel.create({
             googleId: req.user.id,
             email: email,
@@ -185,15 +246,34 @@ authRouter.get(
 
           console.log(`New student created: ${user.email} (${user.role})`);
         } else {
-          // Lecturer accounts must be created manually first
-          req.logout(() => {
-            req.session.destroy(() => {
-              res.redirect(
-                process.env.FRONTEND_URL + `/?error=lecturer_not_found`,
-              );
+          // First non-student user becomes Super Admin
+          const isFirstUser = await UserModel.countDocuments() === 0;
+          
+          if (needsSetup) {
+            // First user in the system - become Super Admin
+            user = await UserModel.create({
+              googleId: req.user.id,
+              email: email,
+              name: req.user.displayName,
+              avatar: req.user.photos?.[0]?.value || "",
+              role: "admin",
+              isSuperAdmin: true,
+              adminPermissions: [],
+              lastLogin: new Date(),
             });
-          });
-          return;
+
+            console.log(`First user created as Super Admin: ${user.email}`);
+          } else {
+            // Not first user - lecturer needs manual creation
+            req.logout(() => {
+              req.session.destroy(() => {
+                res.redirect(
+                  process.env.FRONTEND_URL + `/?error=lecturer_not_found`,
+                );
+              });
+            });
+            return;
+          }
         }
       } else {
         // User exists - update info and googleId if needed
@@ -213,10 +293,15 @@ authRouter.get(
       await logActivity(user._id, "login", { role: user.role }, req);
 
       // Redirect based on role
-      if (role === "student") {
+      if (user.role === "student") {
         res.redirect(process.env.FRONTEND_URL + `/student`);
-      } else if (role === "lecturer") {
-        res.redirect(process.env.FRONTEND_URL + `/lecturer`);
+      } else if (user.role === "admin" || user.role === "lecturer") {
+        // Check if user is admin and needs setup
+        if (user.role === "admin" && needsSetup) {
+          res.redirect(process.env.FRONTEND_URL + `/admin?setup=true`);
+        } else {
+          res.redirect(process.env.FRONTEND_URL + `/lecturer`);
+        }
       }
     } catch (error) {
       console.error("Error in OAuth callback:", error);

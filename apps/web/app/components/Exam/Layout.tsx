@@ -109,19 +109,17 @@ export default function Layout() {
   const navigate = useNavigate();
   const { user, setUser } = useUserStore();
   useEffect(() => {
-    authAPI
-      .getUser()
-      .then((res) => {
-        if (res.data.role !== "student") {
-          navigate("/lecturer");
-        } else {
+    if (!user) {
+      authAPI
+        .getUser()
+        .then((res) => {
           setUser(res.data);
-        }
-      })
-      .catch(() => {
-        navigate("/");
-      });
-  }, [navigate, setUser]);
+        })
+        .catch(() => {
+          navigate("/");
+        });
+    }
+  }, [navigate, setUser, user]);
 
   // ── Auto-fullscreen (production only) ────────────────────────────────────
   useEffect(() => {

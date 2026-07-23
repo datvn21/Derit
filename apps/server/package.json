@@ -5,7 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "NODE_ENV=test jest --runInBand --forceExit",
+    "test:watch": "NODE_ENV=test jest --watch",
+    "test:coverage": "NODE_ENV=test jest --coverage",
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
@@ -13,9 +15,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "async-sema": "^3.1.1",
     "connect-mongo": "^6.0.0",
     "cors": "^2.8.5",
-    "dockerode": "^4.0.9",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "express-session": "^1.18.2",
@@ -29,6 +31,11 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^7.2.1",
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.11",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.12"
   }
 }

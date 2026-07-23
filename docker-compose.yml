@@ -13,14 +13,8 @@ services:
       timeout: 5s
       retries: 5
 
-  java-compiler:
-    build:
-      context: ./services/java-compiler
-      dockerfile: Dockerfile
-    image: derit-java-compiler:latest
-    networks:
-      - none
-    restart: unless-stopped
+  # java-compiler removed - using nsjail for code execution instead
+  # See scripts/setup-nsjail.sh for installation instructions
 
 volumes:
   mongodb_data:

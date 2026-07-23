@@ -1,26 +1,12 @@
 import { Router } from "express";
 import ClassroomModel from "../models/Classroom.js";
-import UserModel from "../models/User.js";
 import { isAuthenticated } from "../middleware/middlewareAuth.js";
+import { isLecturerOrAdmin } from "../middleware/isLecturerOrAdmin.js";
 
 const classroomRouter = Router();
 
-// Helper to check if user is lecturer
-async function isLecturer(req, res, next) {
-    try {
-        const user = await UserModel.findOne({ googleId: req.user.id });
-        if (!user || user.role !== "lecturer") {
-            return res.status(403).json({ error: "Access denied. Lecturer only." });
-        }
-        req.dbUser = user;
-        return next();
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
-    }
-}
-
 // POST /classrooms — Create a classroom
-classroomRouter.post("/", isAuthenticated, isLecturer, async (req, res) => {
+classroomRouter.post("/", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
     try {
         const { classroomName, students } = req.body;
 
@@ -41,7 +27,7 @@ classroomRouter.post("/", isAuthenticated, isLecturer, async (req, res) => {
 });
 
 // GET /classrooms — List all classrooms for the current lecturer
-classroomRouter.get("/", isAuthenticated, isLecturer, async (req, res) => {
+classroomRouter.get("/", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
     try {
         const classrooms = await ClassroomModel.find({
             createdBy: req.dbUser._id,
@@ -54,7 +40,7 @@ classroomRouter.get("/", isAuthenticated, isLecturer, async (req, res) => {
 });
 
 // GET /classrooms/:id — Get a single classroom
-classroomRouter.get("/:id", isAuthenticated, isLecturer, async (req, res) => {
+classroomRouter.get("/:id", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
     try {
         const classroom = await ClassroomModel.findOne({
             _id: req.params.id,
@@ -72,7 +58,7 @@ classroomRouter.get("/:id", isAuthenticated, isLecturer, async (req, res) => {
 });
 
 // PUT /classrooms/:id — Update a classroom
-classroomRouter.put("/:id", isAuthenticated, isLecturer, async (req, res) => {
+classroomRouter.put("/:id", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
     try {
         const classroom = await ClassroomModel.findOne({
             _id: req.params.id,
@@ -102,7 +88,7 @@ classroomRouter.put("/:id", isAuthenticated, isLecturer, async (req, res) => {
 });
 
 // DELETE /classrooms/:id — Delete a classroom
-classroomRouter.delete("/:id", isAuthenticated, isLecturer, async (req, res) => {
+classroomRouter.delete("/:id", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
     try {
         const classroom = await ClassroomModel.findOneAndDelete({
             _id: req.params.id,

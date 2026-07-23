@@ -5,9 +5,11 @@ interface User {
     email: string;
     name: string;
     avatar: string;
-    role: 'student' | 'lecturer';
+    role: 'student' | 'lecturer' | 'admin';
     studentId?: string;
     isActive: boolean;
+    isSuperAdmin?: boolean;
+    adminPermissions?: string[];
 }
 
 interface UserStore {

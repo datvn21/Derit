@@ -1,23 +1,9 @@
 import { Router } from "express";
 import ExamTemplateModel from "../models/ExamTemplate.js";
 import { isAuthenticated } from "../middleware/middlewareAuth.js";
-import UserModel from "../models/User.js";
+import { isLecturerOrAdmin } from "../middleware/isLecturerOrAdmin.js";
 
 const examTemplateRouter = Router();
-
-// Helper to check if user is lecturer
-async function isLecturer(req, res, next) {
-  try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
-    if (!user || user.role !== "lecturer") {
-      return res.status(403).json({ error: "Access denied. Lecturer only." });
-    }
-    req.dbUser = user;
-    return next();
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-}
 
 /**
  * @swagger
@@ -70,7 +56,7 @@ async function isLecturer(req, res, next) {
  *         description: Access denied
  */
 // Create exam template with exam codes (Lecturer only)
-examTemplateRouter.post("/", isAuthenticated, isLecturer, async (req, res) => {
+examTemplateRouter.post("/", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
   try {
     const {
       templateName,
@@ -141,7 +127,7 @@ examTemplateRouter.post("/", isAuthenticated, isLecturer, async (req, res) => {
  *         description: Access denied
  */
 // Get all templates (created by current lecturer)
-examTemplateRouter.get("/", isAuthenticated, isLecturer, async (req, res) => {
+examTemplateRouter.get("/", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
   try {
     const templates = await ExamTemplateModel.find({
       createdBy: req.dbUser._id,
@@ -191,7 +177,7 @@ examTemplateRouter.get("/", isAuthenticated, isLecturer, async (req, res) => {
 examTemplateRouter.get(
   "/:id",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const template = await ExamTemplateModel.findOne({
@@ -216,7 +202,7 @@ examTemplateRouter.get(
 examTemplateRouter.put(
   "/:id",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const template = await ExamTemplateModel.findOne({
@@ -277,7 +263,7 @@ examTemplateRouter.put(
 examTemplateRouter.delete(
   "/:id",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const template = await ExamTemplateModel.findOneAndDelete({
@@ -302,7 +288,7 @@ examTemplateRouter.delete(
 examTemplateRouter.patch(
   "/:id/publish",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const template = await ExamTemplateModel.findOne({
@@ -330,7 +316,7 @@ examTemplateRouter.patch(
 examTemplateRouter.post(
   "/:id/share",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const { email } = req.body;

@@ -16,6 +16,7 @@ const api = axios.create({
 export const authAPI = {
     getUser: () => api.get('/auth/user'),
     logout: () => api.get('/auth/logout'),
+    checkSetup: () => api.get('/auth/check-setup'),
 };
 
 
@@ -143,3 +144,30 @@ export const uploadAPI = {
 };
 
 export default api;
+
+// Admin APIs
+export const adminAPI = {
+    // Users
+    getUsers: (params?: { page?: number; limit?: number; role?: string; search?: string; isActive?: boolean }) =>
+        api.get('/admin/users', { params }),
+    getUserById: (id: string) => api.get(`/admin/users/${id}`),
+    createUser: (data: { email: string; name: string; role: string; studentId?: string }) =>
+        api.post('/admin/users', data),
+    updateUser: (id: string, data: { name?: string; role?: string; isActive?: boolean }) =>
+        api.put(`/admin/users/${id}`, data),
+    deleteUser: (id: string) => api.delete(`/admin/users/${id}`),
+    changeRole: (id: string, data: { role: string; isSuperAdmin?: boolean }) =>
+        api.post(`/admin/users/${id}/role`, data),
+
+    // Settings
+    getSettings: () => api.get('/admin/settings'),
+    updateSettings: (data: any) => api.put('/admin/settings', data),
+
+    // Logs
+    getLogs: (params?: { page?: number; limit?: number; userId?: string; activityType?: string }) =>
+        api.get('/admin/logs', { params }),
+    getLogStats: (days?: number) => api.get('/admin/logs/stats', { params: { days } }),
+
+    // Stats
+    getStats: () => api.get('/admin/stats'),
+};

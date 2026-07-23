@@ -1,7 +1,15 @@
 services:
   mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
     volumes:
       - mongodb_dev_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   server:
     build:
@@ -13,14 +21,31 @@ services:
     environment:
       - NODE_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017/derit
+      - NSJAIL_PATH=/usr/bin/nsjail
+      - NSJAIL_CONFIG_DIR=/app/config
+      - NSJAIL_WORKSPACE_DIR=/workspace
+      - JAVA_HOME=/usr/lib/jvm/java-11-openjdk
+      - PYTHON_BIN=/usr/bin/python3
+      - NSJAIL_MAX_CONCURRENT=4
+      - NSJAIL_MEMORY_LIMIT_MB=512
+      - RUN_TIMEOUT=5000
+      - COMPILE_TIMEOUT=10000
     env_file:
       - ./apps/server/.env
     volumes:
       - ./apps/server:/app
       - /app/node_modules
+      - nsjail-workspace:/workspace
     depends_on:
       mongodb:
         condition: service_healthy
+    # nsjail needs privileged mode and cgroups access
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
     command: nodemon index.js
 
   web:
@@ -41,6 +66,7 @@ services:
 
 volumes:
   mongodb_dev_data:
+  nsjail-workspace:
 
 networks:
   derit-network:

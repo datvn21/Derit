@@ -2,12 +2,25 @@ import { Button } from "~/components/ui/button";
 import Logo from "~/assets/Logo.png";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
+import { authAPI } from "~/lib/api";
 
 export default function Login() {
   const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+  const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
+  const [studentRegAllowed, setStudentRegAllowed] = useState(true);
 
   useEffect(() => {
+    // Check if system needs initial setup (also returns allowed domains)
+    authAPI.checkSetup().then((res) => {
+      setNeedsSetup(res.data.needsSetup);
+      setAllowedDomains(res.data.allowedDomains || []);
+      setStudentRegAllowed(res.data.studentRegistrationAllowed !== false);
+    }).catch(() => {
+      setNeedsSetup(false);
+    });
+
     const errorParam = searchParams.get("error");
     if (errorParam === "invalid_email") {
       setError(
@@ -18,6 +31,10 @@ export default function Login() {
     } else if (errorParam === "lecturer_not_found") {
       setError(
         "Lecturer account has not been created yet! Please contact the admin to be granted access.",
+      );
+    } else if (errorParam === "student_registration_disabled") {
+      setError(
+        "Student registration is currently disabled. Please contact the admin.",
       );
     }
   }, [searchParams]);
@@ -42,6 +59,17 @@ export default function Login() {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
             {error}
+          </div>
+        )}
+
+        {needsSetup && (
+          <div className="bg-green-50 border border-green-200 px-4 py-3 rounded-lg text-sm">
+            <p className="font-medium text-green-800 mb-1">
+              First time setup detected
+            </p>
+            <p className="text-green-700">
+              The first user to login will become the Super Admin.
+            </p>
           </div>
         )}
 
@@ -83,9 +111,12 @@ export default function Login() {
           Login with Google
         </Button>
 
-        <p className="font-medium text-sm text-gray-500 text-center flex items-center justify-center space-x-1">
-          <p className="text-red-500 mr-1">*</p>Student: ***@student.tdtu.edu.vn
-        </p>
+        {studentRegAllowed && allowedDomains.length > 0 && (
+          <p className="font-medium text-sm text-gray-500 text-center flex items-center justify-center space-x-1">
+            <p className="text-red-500 mr-1">*</p>
+            Student: ***@{allowedDomains.join(" or ***@")}
+          </p>
+        )}
       </div>
     </div>
   );

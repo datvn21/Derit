@@ -10,21 +10,19 @@ export default function LecturerDashboard() {
   const navigate = useNavigate();
   const { user, setUser, logout } = useUserStore();
 
-  // Auth check
+  // Auth check - fetch user if not in store
   useEffect(() => {
-    authAPI
-      .getUser()
-      .then((res) => {
-        if (res.data.role !== "lecturer") {
-          navigate("/student");
-        } else {
+    if (!user) {
+      authAPI
+        .getUser()
+        .then((res) => {
           setUser(res.data);
-        }
-      })
-      .catch(() => {
-        navigate("/");
-      });
-  }, [navigate, setUser]);
+        })
+        .catch(() => {
+          navigate("/");
+        });
+    }
+  }, [navigate, setUser, user]);
 
   // Fetch Sessions
   const { data: sessionsData, isLoading: isLoadingSessions } = useQuery({

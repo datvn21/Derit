@@ -3,7 +3,7 @@ import { promisify } from "util";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
-import { executeJavaInDocker } from "./dockerExecutor.js";
+import { executeJavaWithNsjail, executePythonWithNsjail } from "./nsjailExecutor.js";
 
 const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
@@ -19,12 +19,16 @@ const SUBMISSIONS_DIR = path.join(__dirname, "../../temp/submissions");
  * @returns {Object} Execution results
  */
 export async function executeCodeLocally(submission, testcases) {
-  // Java runs inside an isolated Docker container (JDK 11 Alpine)
+  // Java and Python run inside nsjail sandbox
   if (submission.language === "java") {
-    return await executeJavaInDocker(submission, testcases);
+    return await executeJavaWithNsjail(submission, testcases);
   }
 
-  // Other languages (Python, C++, JS) run locally
+  if (submission.language === "python") {
+    return await executePythonWithNsjail(submission, testcases);
+  }
+
+  // Other languages (C++, JS) run locally without sandbox (legacy behavior)
   const submissionId = (submission._id || Date.now()).toString();
   const submissionDir = path.join(SUBMISSIONS_DIR, submissionId);
 

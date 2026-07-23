@@ -6,6 +6,7 @@ import StudentExamCodeModel from "../models/StudentExamCode.js";
 import UserModel from "../models/User.js";
 import ActivityLogModel from "../models/ActivityLog.js";
 import { isAuthenticated } from "../middleware/middlewareAuth.js";
+import { isLecturerOrAdmin } from "../middleware/isLecturerOrAdmin.js";
 import { executeCodeLocally } from "../services/codeExecutor.js";
 import { notifySessionUpdate } from "./examSession.js";
 import { logActivity } from "../services/activityLogger.js";
@@ -587,18 +588,13 @@ submissionRouter.get("/exam/:sessionId", isAuthenticated, async (req, res) => {
 submissionRouter.get(
   "/session/:sessionId/all",
   isAuthenticated,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
-      const user = await UserModel.findOne({ googleId: req.user.id });
-
-      if (user.role !== "lecturer") {
-        return res.status(403).json({ error: "Lecturer only endpoint" });
-      }
-
       // Verify lecturer owns this session
       const session = await ExamSessionModel.findOne({
         _id: req.params.sessionId,
-        createdBy: user._id,
+        createdBy: req.dbUser._id,
       });
 
       if (!session) {
@@ -624,16 +620,12 @@ submissionRouter.get(
 submissionRouter.get(
   "/session/:sessionId/export-csv",
   isAuthenticated,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
-      const user = await UserModel.findOne({ googleId: req.user.id });
-      if (!user || user.role !== "lecturer") {
-        return res.status(403).json({ error: "Lecturer only endpoint" });
-      }
-
       const session = await ExamSessionModel.findOne({
         _id: req.params.sessionId,
-        createdBy: user._id,
+        createdBy: req.dbUser._id,
       });
       if (!session) {
         return res.status(404).json({ error: "Session not found or access denied" });
@@ -753,16 +745,12 @@ submissionRouter.get(
 submissionRouter.get(
   "/session/:sessionId/student/:studentId/detail",
   isAuthenticated,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
-      const user = await UserModel.findOne({ googleId: req.user.id });
-      if (!user || user.role !== "lecturer") {
-        return res.status(403).json({ error: "Lecturer only endpoint" });
-      }
-
       const session = await ExamSessionModel.findOne({
         _id: req.params.sessionId,
-        createdBy: user._id,
+        createdBy: req.dbUser._id,
       }).populate("examTemplateId");
 
       if (!session) {
@@ -881,18 +869,13 @@ submissionRouter.get(
 submissionRouter.get(
   "/session/:sessionId/student/:studentId",
   isAuthenticated,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
-      const user = await UserModel.findOne({ googleId: req.user.id });
-
-      if (user.role !== "lecturer") {
-        return res.status(403).json({ error: "Lecturer only endpoint" });
-      }
-
       // Verify lecturer owns this session
       const session = await ExamSessionModel.findOne({
         _id: req.params.sessionId,
-        createdBy: user._id,
+        createdBy: req.dbUser._id,
       });
 
       if (!session) {
@@ -1210,13 +1193,9 @@ function emitRegradeEvent(sessionId, data) {
 submissionRouter.get(
   "/session/:sessionId/regrade-progress",
   isAuthenticated,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
-      const user = await UserModel.findOne({ googleId: req.user.id });
-      if (!user || user.role !== "lecturer") {
-        return res.status(403).json({ error: "Lecturer only endpoint" });
-      }
-
       const { sessionId } = req.params;
 
       res.setHeader("Content-Type", "text/event-stream");
@@ -1380,17 +1359,13 @@ async function gradeQuestion(questionSub, question, templateLean) {
 submissionRouter.post(
   "/session/:sessionId/regrade-all",
   isAuthenticated,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
-      const user = await UserModel.findOne({ googleId: req.user.id });
-      if (!user || user.role !== "lecturer") {
-        return res.status(403).json({ error: "Lecturer only endpoint" });
-      }
-
       // Verify lecturer owns this session
       const session = await ExamSessionModel.findOne({
         _id: req.params.sessionId,
-        createdBy: user._id,
+        createdBy: req.dbUser._id,
       }).populate("examTemplateId");
 
       if (!session) {
@@ -1598,17 +1573,13 @@ submissionRouter.post(
 submissionRouter.get(
   "/session/:sessionId/student/:studentId/activity",
   isAuthenticated,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
-      const viewer = await UserModel.findOne({ googleId: req.user.id });
-      if (!viewer || viewer.role !== "lecturer") {
-        return res.status(403).json({ error: "Lecturer only endpoint" });
-      }
-
       // Verify the session belongs to this lecturer
       const session = await ExamSessionModel.findOne({
         _id: req.params.sessionId,
-        createdBy: viewer._id,
+        createdBy: req.dbUser._id,
       });
       if (!session) {
         return res.status(404).json({ error: "Session not found or access denied" });

@@ -28,5 +28,17 @@ export default defineConfig({
   },
   server: {
     allowedHosts: true
-  }
+  },
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"],
+    include: ["tests/**/*.test.{ts,tsx}"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+      include: ["app/**/*.{ts,tsx}"],
+      exclude: ["app/**/*.d.ts", "app/**/*.types.ts"],
+    },
+  },
 });

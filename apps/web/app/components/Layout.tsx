@@ -35,11 +35,7 @@ export default function Layout() {
     authAPI
       .getUser()
       .then((res) => {
-        if (res.data.role !== "lecturer") {
-          navigate("/student");
-        } else {
-          setUser(res.data);
-        }
+        setUser(res.data);
       })
       .catch(() => {
         navigate("/");

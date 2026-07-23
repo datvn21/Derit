@@ -6,6 +6,7 @@ import StudentSubmissionModel from "../models/StudentSubmission.js";
 import UserModel from "../models/User.js";
 import ClassroomModel from "../models/Classroom.js";
 import { isAuthenticated } from "../middleware/middlewareAuth.js";
+import { isLecturerOrAdmin } from "../middleware/isLecturerOrAdmin.js";
 
 const examSessionRouter = Router();
 
@@ -36,22 +37,8 @@ async function resolveClassroomEmails(classroomIds) {
   return emails;
 }
 
-// Helper to check if user is lecturer
-async function isLecturer(req, res, next) {
-  try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
-    if (!user || user.role !== "lecturer") {
-      return res.status(403).json({ error: "Access denied. Lecturer only." });
-    }
-    req.dbUser = user;
-    return next();
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-}
-
 // SSE Endpoint for realtime updates (Lecturer only)
-examSessionRouter.get("/:id/live", isAuthenticated, isLecturer, (req, res) => {
+examSessionRouter.get("/:id/live", isAuthenticated, isLecturerOrAdmin, (req, res) => {
   const sessionId = req.params.id;
 
   res.setHeader("Content-Type", "text/event-stream");
@@ -133,7 +120,7 @@ examSessionRouter.get("/:id/live", isAuthenticated, isLecturer, (req, res) => {
  *         description: Template not found
  */
 // Create new exam session from template (Lecturer only)
-examSessionRouter.post("/", isAuthenticated, isLecturer, async (req, res) => {
+examSessionRouter.post("/", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
   try {
     const {
       examTemplateId,
@@ -228,7 +215,7 @@ examSessionRouter.post("/", isAuthenticated, isLecturer, async (req, res) => {
  *                     $ref: '#/components/schemas/ExamSession'
  */
 // Get all sessions (created by current lecturer)
-examSessionRouter.get("/", isAuthenticated, isLecturer, async (req, res) => {
+examSessionRouter.get("/", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
   try {
     const sessions = await ExamSessionModel.find({ createdBy: req.dbUser._id })
       .populate("examTemplateId", "templateName examType language duration")
@@ -557,7 +544,7 @@ examSessionRouter.get("/:id", isAuthenticated, async (req, res) => {
 });
 
 // Update session settings (Lecturer only, scheduled or ongoing)
-examSessionRouter.put("/:id", isAuthenticated, isLecturer, async (req, res) => {
+examSessionRouter.put("/:id", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
   try {
     const session = await ExamSessionModel.findOne({
       _id: req.params.id,
@@ -627,7 +614,7 @@ examSessionRouter.put("/:id", isAuthenticated, isLecturer, async (req, res) => {
 examSessionRouter.delete(
   "/:id",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const session = await ExamSessionModel.findOne({
@@ -654,7 +641,7 @@ examSessionRouter.delete(
 examSessionRouter.post(
   "/:id/start",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const session = await ExamSessionModel.findOne({
@@ -682,7 +669,7 @@ examSessionRouter.post(
 examSessionRouter.post(
   "/:id/end",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const session = await ExamSessionModel.findOne({
@@ -1011,7 +998,7 @@ examSessionRouter.get("/:id/status", isAuthenticated, async (req, res) => {
 examSessionRouter.get(
   "/:id/students",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const session = await ExamSessionModel.findOne({
@@ -1246,7 +1233,7 @@ examSessionRouter.post(
 examSessionRouter.get(
   "/:id/waiting",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const session = await ExamSessionModel.findOne({
@@ -1280,7 +1267,7 @@ examSessionRouter.get(
 examSessionRouter.post(
   "/:id/approve-waiting/:studentId",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const session = await ExamSessionModel.findOne({
@@ -1360,7 +1347,7 @@ examSessionRouter.post(
 examSessionRouter.post(
   "/:id/approve-all-waiting",
   isAuthenticated,
-  isLecturer,
+  isLecturerOrAdmin,
   async (req, res) => {
     try {
       const session = await ExamSessionModel.findOne({

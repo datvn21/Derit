@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-07-23",
+    "scope": "app",
+    "macrostructure": "App Dashboard",
+    "theme": "modern-minimal",
+    "enrichment": "none",
+    "brief": "Derit admin UI redesign - light sidebar, brand colors, modern-minimal"
+  }
+]

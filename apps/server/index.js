@@ -17,7 +17,8 @@ import { fileURLToPath } from "url";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./src/config/swagger.js";
 import MongoStore from "connect-mongo";
-import { cleanupDockerPool } from "./src/services/dockerExecutor.js";
+import { initNsjailExecutor, cleanupNsjailExecutor } from "./src/services/nsjailExecutor.js";
+import adminRouter from "./src/routes/admin.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -126,8 +127,17 @@ app.use("/submissions", submissionRouter);
 app.use("/results", resultRouter);
 app.use("/upload", uploadRouter);
 app.use("/classrooms", classroomRouter);
+app.use("/admin", adminRouter);
 
-connectDB().then(() => {
+connectDB().then(async () => {
+  // Initialize nsjail executor workspace
+  try {
+    await initNsjailExecutor();
+    console.log("nsjail executor initialized");
+  } catch (err) {
+    console.warn("nsjail executor init warning:", err.message);
+  }
+
   app.listen(PORT, () => {
     console.log(`server started at port: ${PORT}`);
   });
@@ -153,8 +163,9 @@ const gracefulShutdown = async (signal) => {
   }, 10000); // 10 seconds max
 
   try {
-    await cleanupDockerPool();
-    console.log("Docker pool cleaned up successfully");
+    await cleanupNsjailExecutor();
+    console.log("nsjail executor cleaned up successfully");
+
     clearTimeout(forceExitTimer);
     process.exit(0);
   } catch (err) {

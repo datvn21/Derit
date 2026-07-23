@@ -20,5 +20,13 @@ export default [
     route("lecturer/classrooms/create", "routes/lecturer/classroom/ClassroomCreate.tsx"),
     route("lecturer/classrooms/:id/edit", "routes/lecturer/classroom/ClassroomEdit.tsx"),
   ]),
+  // Admin routes
+  layout("routes/admin/Layout.tsx", [
+    route("admin", "routes/admin/Dashboard.tsx"),
+    route("admin/users", "routes/admin/Users.tsx"),
+    route("admin/logs", "routes/admin/Logs.tsx"),
+    route("admin/settings", "routes/admin/Settings.tsx"),
+    route("admin/setup", "routes/admin/Setup.tsx"),
+  ]),
 ] satisfies RouteConfig;
 

@@ -26,8 +26,17 @@ const userSchema = new mongoose.Schema(
     // User type & permissions
     role: {
       type: String,
-      enum: ["student", "lecturer"],
+      enum: ["student", "lecturer", "admin"],
       required: true,
+    },
+    // Admin-specific fields
+    isSuperAdmin: {
+      type: Boolean,
+      default: false,
+    },
+    adminPermissions: {
+      type: [String],
+      default: [],
     },
     studentId: {
       type: String,

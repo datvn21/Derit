@@ -47,21 +47,19 @@ export default function StudentDashboard() {
   const [roomCode, setRoomCode] = useState("");
   const [searchError, setSearchError] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  // Fetch user info
+  // Fetch user info if not in store
   useEffect(() => {
-    authAPI
-      .getUser()
-      .then((res) => {
-        if (res.data.role !== "student") {
-          navigate("/lecturer");
-        } else {
+    if (!user) {
+      authAPI
+        .getUser()
+        .then((res) => {
           setUser(res.data);
-        }
-      })
-      .catch(() => {
-        navigate("/");
-      });
-  }, [navigate, setUser]);
+        })
+        .catch(() => {
+          navigate("/");
+        });
+    }
+  }, [navigate, setUser, user]);
 
   // Fetch available exams
   const {
