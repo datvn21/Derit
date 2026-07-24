@@ -777,7 +777,9 @@ function FileSlot({
             {placeholder}
           </FileUploadLabel>
           {required && missing && (
-            <p className="text-xs text-warning">Required — upload the test file for this test case.</p>
+            <p className="text-xs text-warning">
+              Required — upload the test file for this test case.
+            </p>
           )}
         </div>
       )}
