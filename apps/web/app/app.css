@@ -8,9 +8,16 @@
  *   - Paper: oklch(0.985 0 0) (near white)
  *   - Ink:   oklch(0.145 0.005 25) (near black)
  *   - Accent: oklch(0.52 0.18 258) (brand blue) — kept from existing
+ *   - Overlay: oklch(0.145 0.005 25 / 0.5) (modal/scrim)
  *   - Type: Inter
  *   - Spacing: 4-pt scale
  *   - Motion: 150ms ease-out hovers
+ *
+ * Light mode is the only mode shipped. No `dark:` hooks anywhere.
+ * Components MUST reference these tokens via Tailwind utilities
+ * (bg-background, text-foreground, border-border, bg-primary, ...);
+ * direct Tailwind palette usage (bg-gray-*, text-blue-*, ...) is
+ * forbidden outside code-surface files.
  */
 
 @theme {
@@ -36,11 +43,7 @@ html {
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
-
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
-  }
+  @apply bg-background;
 }
 
 @theme inline {
@@ -60,6 +63,7 @@ body {
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-overlay: var(--overlay);
 
   /* Brand primary — read from the OKLCH value in :root so design.md and
      the rendered token always agree. */
@@ -104,13 +108,14 @@ body {
 :root {
   --radius: 0.625rem;
 
-  /* Surfaces */
+  /* Surfaces — paper = oklch(0.985 0 0) per design.md. */
   --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0.005 25);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0.005 25);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0.005 25);
+  --overlay: oklch(0.145 0.005 25 / 0.5);
 
   /* Brand primary — single OKLCH definition. Matches design.md. */
   --primary: oklch(0.52 0.18 258);

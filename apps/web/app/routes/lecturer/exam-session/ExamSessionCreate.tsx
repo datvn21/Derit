@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
+import { Badge } from "~/components/ui/badge";
 import {
   Popover,
   PopoverContent,
@@ -19,6 +20,7 @@ import {
   CommandItem,
   CommandList,
 } from "~/components/ui/command";
+import { cn } from "~/lib/utils";
 import {
   ArrowLeft,
   RefreshCw,
@@ -26,8 +28,7 @@ import {
   ShieldCheck,
   ChevronsUpDown,
   Check,
-  CheckSquare,
-  Square,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,12 +44,15 @@ export default function ExamSessionCreate() {
   const [accessKey, setAccessKey] = useState("");
   const [blacklist, setBlacklist] = useState("");
   const [entryMode, setEntryMode] = useState<"open" | "approval">("approval");
-  const [selectedClassroomIds, setSelectedClassroomIds] = useState<string[]>([]);
+  const [selectedClassroomIds, setSelectedClassroomIds] = useState<string[]>(
+    [],
+  );
   const [manualWhitelist, setManualWhitelist] = useState<string[]>([]);
   const [textareaValue, setTextareaValue] = useState("");
 
   const generateAccessKey = () => {
-    const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const chars =
+      "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     let key = "";
     for (let i = 0; i < 6; i++) {
       key += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -70,7 +74,9 @@ export default function ExamSessionCreate() {
     mutationFn: (data: any) => examSessionAPI.create(data),
     onSuccess: (response) => {
       const roomCode = response.data.session.roomCode;
-      toast.success(`Exam session created! Room Code: ${roomCode}`, { duration: 5000 });
+      toast.success(`Exam session created! Room Code: ${roomCode}`, {
+        duration: 5000,
+      });
       navigate("/lecturer/exam-sessions");
     },
     onError: (error: any) => {
@@ -79,10 +85,22 @@ export default function ExamSessionCreate() {
   });
 
   const handleSubmit = () => {
-    if (!examTemplateId) { toast.error("Please select an exam template"); return; }
-    if (!sessionName.trim()) { toast.error("Please enter session name"); return; }
-    if (!startTime || !endTime) { toast.error("Please set start and end time"); return; }
-    if (!accessKey.trim()) { toast.error("Please enter access key"); return; }
+    if (!examTemplateId) {
+      toast.error("Please select an exam template");
+      return;
+    }
+    if (!sessionName.trim()) {
+      toast.error("Please enter session name");
+      return;
+    }
+    if (!startTime || !endTime) {
+      toast.error("Please set start and end time");
+      return;
+    }
+    if (!accessKey.trim()) {
+      toast.error("Please enter access key");
+      return;
+    }
 
     const data = {
       examTemplateId,
@@ -91,8 +109,14 @@ export default function ExamSessionCreate() {
       endTime: new Date(endTime).toISOString(),
       accessKey,
       entryMode,
-      whitelist: textareaValue.split("\n").map((e) => e.trim()).filter(Boolean),
-      blacklist: blacklist.split("\n").map((e) => e.trim()).filter(Boolean),
+      whitelist: textareaValue
+        .split("\n")
+        .map((e) => e.trim())
+        .filter(Boolean),
+      blacklist: blacklist
+        .split("\n")
+        .map((e) => e.trim())
+        .filter(Boolean),
       classroomIds: selectedClassroomIds,
     };
     createMutation.mutate(data);
@@ -116,14 +140,20 @@ export default function ExamSessionCreate() {
       } else {
         setTextareaValue((text) => {
           const existingStudents = new Set(
-            text.split("\n").map((line) => line.trim()).filter(Boolean),
+            text
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean),
           );
           let newStudents = "";
           classroom.students?.forEach((student: any) => {
-            if (!existingStudents.has(student.trim())) newStudents += student + "\n";
+            if (!existingStudents.has(student.trim()))
+              newStudents += student + "\n";
           });
           const normalizedText = text.trim()
-            ? text.endsWith("\n") ? text : text + "\n"
+            ? text.endsWith("\n")
+              ? text
+              : text + "\n"
             : "";
           return normalizedText + newStudents;
         });
@@ -140,7 +170,7 @@ export default function ExamSessionCreate() {
     .reduce((acc: number, c: any) => acc + (c.students?.length || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -149,18 +179,18 @@ export default function ExamSessionCreate() {
               variant="ghost"
               size="sm"
               onClick={() => navigate("/lecturer/exam-sessions")}
-              className="text-gray-500 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back
             </Button>
-            <div className="h-4 w-px bg-gray-200" />
-            <h1 className="text-lg font-semibold text-gray-900">Create Exam Session</h1>
+            <div className="h-4 w-px bg-border" />
+            <h1 className="text-lg font-semibold text-foreground">
+              Create Exam Session
+            </h1>
           </div>
           <Button
             onClick={handleSubmit}
             disabled={createMutation.isPending}
-            className="bg-primary hover:bg-blue-800 text-white cursor-pointer"
           >
             {createMutation.isPending ? "Creating..." : "Create Session"}
           </Button>
@@ -172,42 +202,52 @@ export default function ExamSessionCreate() {
           {/* ── Left column ── */}
           <div className="lg:col-span-2 space-y-5">
             {/* Template */}
-            <div className="bg-white border border-gray-200 rounded-md p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-gray-700">Template</h2>
+            <div className="bg-card border border-border rounded-md p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-foreground">Template</h2>
 
               <div className="space-y-1">
-                <Label htmlFor="template" className="text-xs text-gray-500">
-                  Exam Template <span className="text-red-400">*</span>
+                <Label htmlFor="template" className="text-xs text-muted-foreground">
+                  Exam Template <span className="text-destructive">*</span>
                 </Label>
-                <Popover open={templateComboOpen} onOpenChange={setTemplateComboOpen}>
+                <Popover
+                  open={templateComboOpen}
+                  onOpenChange={setTemplateComboOpen}
+                >
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
                       aria-expanded={templateComboOpen}
-                      className="w-full justify-between font-normal text-sm text-left h-9 border-gray-200"
+                      className="w-full justify-between font-normal text-sm text-left h-9"
                     >
-                      <span className="truncate text-gray-700">
+                      <span className="truncate">
                         {examTemplateId
                           ? (() => {
-                              const t = templates.find((t: any) => t._id === examTemplateId);
+                              const t = templates.find(
+                                (t: any) => t._id === examTemplateId,
+                              );
                               return t
                                 ? `${t.templateName} (${t.examType} · ${t.language})`
                                 : "Select template...";
                             })()
                           : "Select template..."}
                       </span>
-                      <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 text-gray-400" />
+                      <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="p-0" style={{ width: "var(--radix-popover-trigger-width)" }}>
+                  <PopoverContent
+                    className="p-0"
+                    style={{ width: "var(--radix-popover-trigger-width)" }}
+                  >
                     <Command>
                       <CommandInput placeholder="Search..." />
                       <CommandList>
                         <CommandEmpty>No templates found.</CommandEmpty>
                         <CommandGroup>
                           {isLoading ? (
-                            <div className="py-4 text-center text-sm text-gray-400">Loading...</div>
+                            <div className="py-4 text-center text-sm text-muted-foreground">
+                              Loading...
+                            </div>
                           ) : (
                             templates.map((template: any) => (
                               <CommandItem
@@ -220,12 +260,15 @@ export default function ExamSessionCreate() {
                                 }}
                               >
                                 <Check
-                                  className={`mr-2 h-3.5 w-3.5 ${
-                                    examTemplateId === template._id ? "opacity-100" : "opacity-0"
-                                  }`}
+                                  className={cn(
+                                    "mr-2 h-3.5 w-3.5",
+                                    examTemplateId === template._id
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
                                 />
                                 {template.templateName}
-                                <span className="ml-1.5 text-xs text-gray-400">
+                                <span className="ml-1.5 text-xs text-muted-foreground">
                                   {template.examType} · {template.language}
                                 </span>
                               </CommandItem>
@@ -239,44 +282,42 @@ export default function ExamSessionCreate() {
 
                 {selectedTemplate && (
                   <div className="flex flex-wrap gap-1.5 pt-1">
-                    <span className="inline-flex items-center text-xs bg-gray-100 text-gray-600 rounded px-2 py-0.5">
-                      {selectedTemplate.examType}
-                    </span>
-                    <span className="inline-flex items-center text-xs bg-gray-100 text-gray-600 rounded px-2 py-0.5 capitalize">
+                    <Badge variant="default">{selectedTemplate.examType}</Badge>
+                    <Badge variant="default" className="capitalize">
                       {selectedTemplate.language}
-                    </span>
-                    <span className="inline-flex items-center text-xs bg-gray-100 text-gray-600 rounded px-2 py-0.5">
-                      {selectedTemplate.duration} min
-                    </span>
-                    <span className="inline-flex items-center text-xs bg-gray-100 text-gray-600 rounded px-2 py-0.5">
+                    </Badge>
+                    <Badge variant="default">{selectedTemplate.duration} min</Badge>
+                    <Badge variant="default">
                       {selectedTemplate.examCodes?.length || 0} codes
-                    </span>
+                    </Badge>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Session Info */}
-            <div className="bg-white border border-gray-200 rounded-md p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-gray-700">Session Info</h2>
+            <div className="bg-card border border-border rounded-md p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-foreground">
+                Session Info
+              </h2>
 
               <div className="space-y-1">
-                <Label htmlFor="sessionName" className="text-xs text-gray-500">
-                  Session Name <span className="text-red-400">*</span>
+                <Label htmlFor="sessionName" className="text-xs text-muted-foreground">
+                  Session Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="sessionName"
                   value={sessionName}
                   onChange={(e) => setSessionName(e.target.value)}
                   placeholder="e.g., OOP Midterm K21 Spring 2025"
-                  className="h-9 text-sm border-gray-200"
+                  className="h-9 text-sm"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="startTime" className="text-xs text-gray-500">
-                    Start Time <span className="text-red-400">*</span>
+                  <Label htmlFor="startTime" className="text-xs text-muted-foreground">
+                    Start Time <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="startTime"
@@ -287,7 +328,8 @@ export default function ExamSessionCreate() {
                       setStartTime(val);
                       if (val && selectedTemplate?.duration) {
                         const end = new Date(
-                          new Date(val).getTime() + selectedTemplate.duration * 60000,
+                          new Date(val).getTime() +
+                            selectedTemplate.duration * 60000,
                         );
                         const pad = (n: number) => String(n).padStart(2, "0");
                         setEndTime(
@@ -295,33 +337,33 @@ export default function ExamSessionCreate() {
                         );
                       }
                     }}
-                    className="h-9 text-sm border-gray-200"
+                    className="h-9 text-sm"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="endTime" className="text-xs text-gray-500">
-                    End Time <span className="text-red-400">*</span>
+                  <Label htmlFor="endTime" className="text-xs text-muted-foreground">
+                    End Time <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="endTime"
                     type="datetime-local"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="h-9 text-sm border-gray-200"
+                    className="h-9 text-sm"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="accessKey" className="text-xs text-gray-500">
-                  Access Key <span className="text-red-400">*</span>
+                <Label htmlFor="accessKey" className="text-xs text-muted-foreground">
+                  Access Key <span className="text-destructive">*</span>
                 </Label>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={generateAccessKey}
-                    className="h-9 px-3 border-gray-200 cursor-pointer"
+                    className="h-9 px-3"
                     title="Generate random key"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
@@ -331,24 +373,27 @@ export default function ExamSessionCreate() {
                     value={accessKey}
                     onChange={(e) => setAccessKey(e.target.value)}
                     placeholder="e.g., K21OOP2025"
-                    className="flex-1 h-9 text-sm border-gray-200"
+                    className="flex-1 h-9 text-sm"
                   />
                 </div>
               </div>
             </div>
 
             {/* Entry Mode */}
-            <div className="bg-white border border-gray-200 rounded-md p-5 space-y-3">
-              <h2 className="text-sm font-semibold text-gray-700">Entry Mode</h2>
+            <div className="bg-card border border-border rounded-md p-5 space-y-3">
+              <h2 className="text-sm font-semibold text-foreground">
+                Entry Mode
+              </h2>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setEntryMode("open")}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-md border text-left transition-colors cursor-pointer ${
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-3 rounded-md border text-left transition-colors cursor-pointer",
                     entryMode === "open"
-                      ? " bg-primary text-white"
-                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                  }`}
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "border-border bg-card text-foreground hover:border-foreground/20",
+                  )}
                 >
                   <Unlock className="w-4 h-4 shrink-0" />
                   <span className="text-sm font-medium">Open Room</span>
@@ -356,11 +401,12 @@ export default function ExamSessionCreate() {
                 <button
                   type="button"
                   onClick={() => setEntryMode("approval")}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-md border text-left transition-colors cursor-pointer ${
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-3 rounded-md border text-left transition-colors cursor-pointer",
                     entryMode === "approval"
-                      ? " bg-primary text-white"
-                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                  }`}
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "border-border bg-card text-foreground hover:border-foreground/20",
+                  )}
                 >
                   <ShieldCheck className="w-4 h-4 shrink-0" />
                   <span className="text-sm font-medium">Approval</span>
@@ -372,53 +418,73 @@ export default function ExamSessionCreate() {
           {/* ── Right column ── */}
           <div className="space-y-5">
             {/* Whitelist */}
-            <div className="bg-white border border-gray-200 rounded-md p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-gray-700">
+            <div className="bg-card border border-border rounded-md p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-foreground">
                 Whitelist{" "}
-                <span className="text-xs font-normal text-gray-400">(optional)</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  (optional)
+                </span>
               </h2>
 
               {classrooms.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-xs text-gray-500">From Classroom</Label>
-                  <Popover open={classroomComboOpen} onOpenChange={setClassroomComboOpen}>
+                  <Label className="text-xs text-muted-foreground">
+                    From Classroom
+                  </Label>
+                  <Popover
+                    open={classroomComboOpen}
+                    onOpenChange={setClassroomComboOpen}
+                  >
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
                         aria-expanded={classroomComboOpen}
-                        className="w-full justify-between font-normal text-sm text-left h-9 border-gray-200"
+                        className="w-full justify-between font-normal text-sm text-left h-9"
                       >
-                        <span className="truncate text-gray-500">
+                        <span className="truncate">
                           {selectedClassroomIds.length > 0
                             ? `${selectedClassroomIds.length} classroom selected`
                             : "Select classrooms..."}
                         </span>
-                        <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 text-gray-400" />
+                        <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="p-0" style={{ width: "var(--radix-popover-trigger-width)" }}>
+                    <PopoverContent
+                      className="p-0"
+                      style={{ width: "var(--radix-popover-trigger-width)" }}
+                    >
                       <Command>
                         <CommandInput placeholder="Search classroom..." />
                         <CommandList>
                           <CommandEmpty>No classrooms found.</CommandEmpty>
                           <CommandGroup>
                             {classrooms.map((classroom: any) => {
-                              const isSelected = selectedClassroomIds.includes(classroom._id);
+                              const isSelected = selectedClassroomIds.includes(
+                                classroom._id,
+                              );
                               return (
                                 <CommandItem
                                   key={classroom._id}
                                   value={classroom.classroomName}
                                   onSelect={() => {
-                                    const fakeEvent = { stopPropagation: () => {}, preventDefault: () => {} } as React.MouseEvent;
+                                    const fakeEvent = {
+                                      stopPropagation: () => {},
+                                      preventDefault: () => {},
+                                    } as React.MouseEvent;
                                     toggleClassroom(fakeEvent, classroom._id);
                                   }}
                                 >
                                   <Check
-                                    className={`mr-2 h-3.5 w-3.5 ${isSelected ? "opacity-100" : "opacity-0"}`}
+                                    className={cn(
+                                      "mr-2 h-3.5 w-3.5",
+                                      isSelected ? "opacity-100" : "opacity-0",
+                                    )}
                                   />
-                                  <span className="flex-1">{classroom.classroomName}</span>
-                                  <span className="ml-2 text-xs text-gray-400">
+                                  <span className="flex-1">
+                                    {classroom.classroomName}
+                                  </span>
+                                  <span className="ml-2 text-xs text-muted-foreground">
                                     {classroom.students?.length || 0} sv
                                   </span>
                                 </CommandItem>
@@ -437,34 +503,36 @@ export default function ExamSessionCreate() {
                         const c = classrooms.find((c: any) => c._id === id);
                         if (!c) return null;
                         return (
-                          <span
-                            key={id}
-                            className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 rounded px-2 py-0.5"
-                          >
+                          <Badge key={id} variant="default">
                             {c.classroomName}
                             <button
                               type="button"
                               onClick={(e) => toggleClassroom(e, id)}
-                              className="ml-0.5 text-gray-400 hover:text-gray-700 cursor-pointer leading-none"
+                              className="ml-1 text-muted-foreground hover:text-foreground cursor-pointer leading-none"
+                              aria-label={`Remove ${c.classroomName}`}
                             >
-                              ×
+                              <X className="w-3 h-3" />
                             </button>
-                          </span>
+                          </Badge>
                         );
                       })}
                     </div>
                   )}
 
                   {classroomStudentCount > 0 && (
-                    <p className="text-xs text-gray-500">{classroomStudentCount} students selected</p>
+                    <p className="text-xs text-muted-foreground">
+                      {classroomStudentCount} students selected
+                    </p>
                   )}
                 </div>
               )}
 
-              {classrooms.length > 0 && <div className="border-t border-gray-100" />}
+              {classrooms.length > 0 && (
+                <div className="border-t border-border" />
+              )}
 
               <div className="space-y-1">
-                <Label htmlFor="whitelist" className="text-xs text-gray-500">
+                <Label htmlFor="whitelist" className="text-xs text-muted-foreground">
                   Manual (email per line)
                 </Label>
                 <Textarea
@@ -473,16 +541,18 @@ export default function ExamSessionCreate() {
                   onChange={(e) => setTextareaValue(e.target.value)}
                   placeholder={"student1@tdtu.edu.vn\nstudent2@tdtu.edu.vn"}
                   rows={4}
-                  className="text-sm font-mono border-gray-200 resize-none"
+                  className="text-sm font-mono resize-none"
                 />
               </div>
             </div>
 
             {/* Blacklist */}
-            <div className="bg-white border border-gray-200 rounded-md p-5 space-y-3">
-              <h2 className="text-sm font-semibold text-gray-700">
+            <div className="bg-card border border-border rounded-md p-5 space-y-3">
+              <h2 className="text-sm font-semibold text-foreground">
                 Blacklist{" "}
-                <span className="text-xs font-normal text-gray-400">(optional)</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  (optional)
+                </span>
               </h2>
               <Textarea
                 id="blacklist"
@@ -490,7 +560,7 @@ export default function ExamSessionCreate() {
                 onChange={(e) => setBlacklist(e.target.value)}
                 placeholder={"blocked@tdtu.edu.vn"}
                 rows={3}
-                className="text-sm font-mono border-gray-200 resize-none"
+                className="text-sm font-mono resize-none"
               />
             </div>
           </div>

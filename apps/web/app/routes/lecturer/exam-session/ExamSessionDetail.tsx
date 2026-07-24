@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { examSessionAPI, submissionAPI, BACKEND_URL } from "~/lib/api";
+import { examSessionAPI, BACKEND_URL } from "~/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
+import { Badge } from "~/components/ui/badge";
 import StudentActivityDialog from "~/components/StudentActivityDialog";
 import {
   ArrowLeft,
@@ -14,17 +15,8 @@ import {
   X,
   Trash2,
   Play,
-  StopCircle,
   Copy,
-  Users,
-  Calendar,
-  Key,
-  Clock,
   FileText,
-  RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
   BarChart2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -38,6 +30,13 @@ const formatToLocalDateTime = (utcDate: string | Date): string => {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const statusVariantMap: Record<string, "info" | "success" | "destructive" | "warning" | "default"> = {
+  scheduled: "info",
+  ongoing: "warning",
+  ended: "destructive",
+  graded: "success",
 };
 
 export default function ExamSessionDetail() {
@@ -54,8 +53,6 @@ export default function ExamSessionDetail() {
     studentId?: string;
     avatar?: string;
   } | null>(null);
-
-
 
   // Form states
   const [sessionName, setSessionName] = useState("");
@@ -76,15 +73,15 @@ export default function ExamSessionDetail() {
   useEffect(() => {
     if (sessionData?.data?.session) {
       const session = sessionData.data.session;
-      
+
       // Strip @student.tdtu.edu.vn from emails for display
       const stripDomain = (emails: string[]) =>
         emails.map((e) =>
           e.endsWith("@student.tdtu.edu.vn")
             ? e.replace("@student.tdtu.edu.vn", "")
-            : e
+            : e,
         );
-      
+
       setSessionName(session.sessionName);
       setStartTime(formatToLocalDateTime(session.startTime));
       setEndTime(formatToLocalDateTime(session.endTime));
@@ -111,9 +108,12 @@ export default function ExamSessionDetail() {
   // SSE for Realtime Updates
   useEffect(() => {
     if (!id) return;
-    const eventSource = new EventSource(`${BACKEND_URL}/exam-sessions/${id}/live`, {
-      withCredentials: true,
-    });
+    const eventSource = new EventSource(
+      `${BACKEND_URL}/exam-sessions/${id}/live`,
+      {
+        withCredentials: true,
+      },
+    );
 
     eventSource.onmessage = (event) => {
       try {
@@ -187,7 +187,8 @@ export default function ExamSessionDetail() {
 
   // Approve waiting student mutation
   const approveWaitingMutation = useMutation({
-    mutationFn: (studentId: string) => examSessionAPI.approveWaitingStudent(id!, studentId),
+    mutationFn: (studentId: string) =>
+      examSessionAPI.approveWaitingStudent(id!, studentId),
     onSuccess: () => {
       toast.success("Student approved");
       refetchWaiting();
@@ -209,7 +210,9 @@ export default function ExamSessionDetail() {
       queryClient.invalidateQueries({ queryKey: ["exam-session", id] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to approve all students");
+      toast.error(
+        error.response?.data?.error || "Failed to approve all students",
+      );
     },
   });
 
@@ -252,8 +255,6 @@ export default function ExamSessionDetail() {
     }
   };
 
-
-
   const handleCopyRoomCode = () => {
     if (session?.roomCode) {
       navigator.clipboard.writeText(session.roomCode);
@@ -270,7 +271,7 @@ export default function ExamSessionDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
@@ -281,10 +282,10 @@ export default function ExamSessionDetail() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">Session not found</p>
-          <Button className="cursor-pointer" onClick={() => navigate("/lecturer/exam-sessions")}>
+          <p className="text-muted-foreground mb-4">Session not found</p>
+          <Button onClick={() => navigate("/lecturer/exam-sessions")}>
             Back to Sessions
           </Button>
         </div>
@@ -292,38 +293,30 @@ export default function ExamSessionDetail() {
     );
   }
 
-  const canEdit = session.status === "scheduled" || session.status === "ongoing";
+  const canEdit =
+    session.status === "scheduled" || session.status === "ongoing";
   const canDelete = session.status === "scheduled";
   const canStart = session.status === "scheduled";
   const canEnd = session.status === "ongoing";
 
-  const statusColors = {
-    scheduled: "bg-blue-100 text-blue-800",
-    ongoing: "bg-yellow-100 text-yellow-800",
-    ended: "bg-red-100 text-red-800",
-    graded: "bg-green-100 text-green-800",
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-card border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 onClick={() => navigate("/lecturer/exam-sessions")}
-                className="text-gray-600 cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
               <div className="flex gap-3">
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-foreground">
                   {session.sessionName}
                 </h1>
-               
               </div>
             </div>
 
@@ -333,21 +326,20 @@ export default function ExamSessionDetail() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/lecturer/exam-sessions/${id}/results`)}
-                  className="cursor-pointer gap-1.5"
+                  onClick={() =>
+                    navigate(`/lecturer/exam-sessions/${id}/results`)
+                  }
+                  className="gap-1.5"
                 >
                   <BarChart2 className="w-4 h-4" />
                   Results
                 </Button>
               )}
 
-
-
               {canStart && (
                 <Button
                   onClick={() => startMutation.mutate()}
                   disabled={startMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700 cursor-pointer"
                 >
                   <Play className="w-4 h-4 mr-2" />
                   Start Session
@@ -357,20 +349,26 @@ export default function ExamSessionDetail() {
               {canEnd && (
                 <Button
                   onClick={() => {
-                    if (window.confirm("Are you sure you want to end this session? Students will no longer be able to submit.")) {
+                    if (
+                      window.confirm(
+                        "Are you sure you want to end this session? Students will no longer be able to submit.",
+                      )
+                    ) {
                       endMutation.mutate();
                     }
                   }}
                   disabled={endMutation.isPending}
-                  className="bg-primary hover:bg-primary/80 cursor-pointer"
                 >
-                  <div className="w-3.5 aspect-square rounded bg-white"></div>
+                  <div className="w-3.5 aspect-square rounded bg-primary-foreground"></div>
                   End Session
                 </Button>
               )}
 
               {canEdit && !isEditing && (
-                <Button className="cursor-pointer" onClick={() => setIsEditing(true)} variant="outline">
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  variant="outline"
+                >
                   <Edit2 className="w-4 h-4 mr-2" />
                   Edit
                 </Button>
@@ -381,12 +379,14 @@ export default function ExamSessionDetail() {
                   <Button
                     onClick={handleUpdate}
                     disabled={updateMutation.isPending}
-                    className="bg-primary hover:bg-primary/80 cursor-pointer"
                   >
                     <Save className="w-4 h-4 mr-2" />
                     Save
                   </Button>
-                  <Button className="cursor-pointer" onClick={() => setIsEditing(false)} variant="outline">
+                  <Button
+                    onClick={() => setIsEditing(false)}
+                    variant="outline"
+                  >
                     <X className="w-4 h-4 mr-2" />
                     Cancel
                   </Button>
@@ -398,7 +398,7 @@ export default function ExamSessionDetail() {
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
                   variant="outline"
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                  className="text-destructive hover:text-destructive"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -413,18 +413,17 @@ export default function ExamSessionDetail() {
           {/* Main Info */}
           <div className="lg:col-span-2 space-y-6">
             {/* Session Details Card */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="bg-card rounded-lg border border-border p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
                 Session Details
               </h2>
 
               <div className="space-y-4">
                 {/* Room Code */}
-                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between p-4 bg-accent rounded-lg border border-border">
                   <div className="flex items-center gap-3">
-                    
                     <div>
-                      <p className="text-sm text-gray-600">Room Code</p>
+                      <p className="text-sm text-muted-foreground">Room Code</p>
                       <p className="text-xl font-mono font-bold text-primary">
                         {session.roomCode}
                       </p>
@@ -434,27 +433,24 @@ export default function ExamSessionDetail() {
                     onClick={handleCopyRoomCode}
                     variant="outline"
                     size="sm"
-                    className="cursor-pointer"
                   >
                     <Copy className="w-4 h-4 mr-1" />
                     Copy
                   </Button>
                 </div>
 
-               
-
                 {/* Template Info */}
-                <div className="p-4 bg-gray-100 rounded-lg">
+                <div className="p-4 bg-muted rounded-lg border border-border">
                   <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4 text-gray-600" />
-                    <p className="text-sm font-medium text-gray-700">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm font-medium text-foreground">
                       Exam Template
                     </p>
                   </div>
-                  <p className="text-gray-900">
+                  <p className="text-foreground">
                     {session.examTemplateId?.templateName}
                   </p>
-                  <div className="flex gap-4 mt-2 text-sm text-gray-600">
+                  <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
                     <span>Type: {session.examTemplateId?.examType}</span>
                     <span>Language: {session.examTemplateId?.language}</span>
                     <span>
@@ -462,9 +458,11 @@ export default function ExamSessionDetail() {
                     </span>
                   </div>
                 </div>
- {/* Session Name */}
+                {/* Session Name */}
                 <div className="flex w-full justify-between gap-2">
-                  <Label  htmlFor="sessionName" className="min-w-[100px]">Session Name</Label>
+                  <Label htmlFor="sessionName" className="min-w-[100px]">
+                    Session Name
+                  </Label>
                   {isEditing ? (
                     <Input
                       id="sessionName"
@@ -473,64 +471,60 @@ export default function ExamSessionDetail() {
                       className="mt-1 flex-1"
                     />
                   ) : (
-                    <p className="mt-1 text-gray-900">{session.sessionName}</p>
+                    <p className="mt-1 text-foreground">{session.sessionName}</p>
                   )}
                 </div>
                 {/* Schedule */}
-                  <div className="flex w-full justify-between gap-2">
-                    <Label
-                       htmlFor="startTime"
-                      className="flex items-center gap-2 min-w-[100px]"
-                    >
-                     
-                      Start Time
-                    </Label>
-                    {isEditing ? (
-                      <Input
-                        id="startTime"
-                        type="datetime-local"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        className="mt-1  flex-1"
-                      />
-                    ) : (
-                      <p className="mt-1 text-gray-900">
-                        {new Date(session.startTime).toLocaleString("vi-VN")}
-                      </p>
-                    )}
-                  </div>
+                <div className="flex w-full justify-between gap-2">
+                  <Label
+                    htmlFor="startTime"
+                    className="flex items-center gap-2 min-w-[100px]"
+                  >
+                    Start Time
+                  </Label>
+                  {isEditing ? (
+                    <Input
+                      id="startTime"
+                      type="datetime-local"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="mt-1  flex-1"
+                    />
+                  ) : (
+                    <p className="mt-1 text-foreground">
+                      {new Date(session.startTime).toLocaleString("vi-VN")}
+                    </p>
+                  )}
+                </div>
 
-                  <div className="flex w-full justify-between gap-2">
-                    <Label
-                       htmlFor="endTime"
-                      className="flex items-center gap-2 min-w-[100px]"
-                    >
-                     
-                      End Time
-                    </Label>
-                    {isEditing ? (
-                      <Input
-                        id="endTime"
-                        type="datetime-local"
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                        className="mt-1 flex-1"
-                      />
-                    ) : (
-                      <p className="mt-1 text-gray-900">
-                        {new Date(session.endTime).toLocaleString("vi-VN")}
-                      </p>
-                    )}
-                  </div>
-             
+                <div className="flex w-full justify-between gap-2">
+                  <Label
+                    htmlFor="endTime"
+                    className="flex items-center gap-2 min-w-[100px]"
+                  >
+                    End Time
+                  </Label>
+                  {isEditing ? (
+                    <Input
+                      id="endTime"
+                      type="datetime-local"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="mt-1 flex-1"
+                    />
+                  ) : (
+                    <p className="mt-1 text-foreground">
+                      {new Date(session.endTime).toLocaleString("vi-VN")}
+                    </p>
+                  )}
+                </div>
 
                 {/* Access Key */}
                 <div className="flex w-full justify-between gap-2">
                   <Label
-                     htmlFor="accessKey"
+                    htmlFor="accessKey"
                     className="flex items-center gap-2 min-w-[100px]"
                   >
-                   
                     Access Key
                   </Label>
                   {isEditing ? (
@@ -542,15 +536,13 @@ export default function ExamSessionDetail() {
                     />
                   ) : (
                     <div className="flex items-center gap-2 mt-1">
-                       
-                      <code className="px-3 py-2 bg-gray-100 rounded border font-mono text-sm">
+                      <code className="px-3 py-2 bg-muted rounded border border-border font-mono text-sm">
                         {session.accessKey}
                       </code>
                       <Button
                         onClick={handleCopyAccessKey}
                         variant="ghost"
                         size="sm"
-                        className="cursor-pointer"
                       >
                         <Copy className="w-4 h-4" />
                       </Button>
@@ -564,7 +556,6 @@ export default function ExamSessionDetail() {
                     htmlFor="whitelist"
                     className="flex items-center gap-2 mb-3"
                   >
-                  
                     Whitelist
                   </Label>
                   {isEditing ? (
@@ -579,18 +570,18 @@ export default function ExamSessionDetail() {
                   ) : (
                     <div className="mt-1">
                       {session.whitelist?.length > 0 ? (
-                        <div className="p-3 bg-gray-50 rounded border  border-gray-200 max-h-32 overflow-y-auto">
+                        <div className="p-3 bg-muted rounded border border-border max-h-32 overflow-y-auto">
                           {session.whitelist.map((email: string, i: number) => (
                             <p
                               key={i}
-                              className="text-sm text-gray-700 font-mono"
+                              className="text-sm text-foreground font-mono"
                             >
                               {email}
                             </p>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-500 italic">
+                        <p className="text-sm text-muted-foreground italic">
                           All students allowed
                         </p>
                       )}
@@ -604,7 +595,6 @@ export default function ExamSessionDetail() {
                     htmlFor="blacklist"
                     className="flex items-center gap-2"
                   >
-                    
                     Blacklist
                   </Label>
                   {isEditing ? (
@@ -619,18 +609,18 @@ export default function ExamSessionDetail() {
                   ) : (
                     <div className="mt-1">
                       {session.blacklist?.length > 0 ? (
-                        <div className="p-3 bg-gray-50 rounded border border-gray-200 max-h-32 overflow-y-auto">
+                        <div className="p-3 bg-muted rounded border border-border max-h-32 overflow-y-auto">
                           {session.blacklist.map((email: string, i: number) => (
                             <p
                               key={i}
-                              className="text-sm text-gray-700 font-mono"
+                              className="text-sm text-foreground font-mono"
                             >
                               {email}
                             </p>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-500 italic">
+                        <p className="text-sm text-muted-foreground italic">
                           No blacklisted students
                         </p>
                       )}
@@ -644,73 +634,72 @@ export default function ExamSessionDetail() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Statistics Card */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="bg-card rounded-lg border border-border p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
                 Statistics
               </h2>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Entry Mode</span>
-                  <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                    session.entryMode === "open"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-blue-100 text-blue-800"
-                  }`}>
+                  <span className="text-sm text-muted-foreground">Entry Mode</span>
+                  <Badge variant={session.entryMode === "open" ? "success" : "info"}>
                     {session.entryMode === "open" ? "Open" : "Approval"}
-                  </span>
+                  </Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Waiting for Approval</span>
-                  <span className="text-lg font-bold">
+                  <span className="text-sm text-muted-foreground">
+                    Waiting for Approval
+                  </span>
+                  <span className="text-lg font-bold text-foreground">
                     {waitingData?.data?.waitingStudents?.length || 0}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Joined</span>
-                  <span className="text-lg font-bold text-black">
+                  <span className="text-sm text-muted-foreground">Joined</span>
+                  <span className="text-lg font-bold text-foreground">
                     {students.length}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 flex items-center gap-1">
-                    <span className="inline-block w-2 h-2 rounded-full bg-amber-400"></span>
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-full bg-warning"></span>
                     In Progress
                   </span>
-                  <span className="text-lg font-bold text-amber-600">
+                  <span className="text-lg font-bold text-warning">
                     {students.filter((s: any) => !s.isSubmitted).length}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 flex items-center gap-1">
-                    <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-full bg-success"></span>
                     Submitted
                   </span>
-                  <span className="text-lg font-bold text-green-700">
-                    {students.filter((s:any) => s.isSubmitted).length}
+                  <span className="text-lg font-bold text-success">
+                    {students.filter((s: any) => s.isSubmitted).length}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Status</span>
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full capitalize ${statusColors[session.status as keyof typeof statusColors]}`}
+                  <span className="text-sm text-muted-foreground">Status</span>
+                  <Badge
+                    variant={statusVariantMap[session.status] ?? "default"}
+                    className="capitalize"
                   >
                     {session.status}
-                  </span>
+                  </Badge>
                 </div>
               </div>
             </div>
 
             {/* Waiting List Card */}
             {(waitingData?.data?.waitingStudents?.length || 0) > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="bg-card rounded-lg border border-border p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2 className="text-lg font-semibold text-foreground">
                     Waiting {waitingData?.data?.waitingStudents?.length}
                   </h2>
                   <Button
                     onClick={() => approveAllWaitingMutation.mutate()}
                     disabled={approveAllWaitingMutation.isPending}
-                    className="bg-primary hover:bg-primary/80 text-white px-3 py-1 text-sm cursor-pointer"
+                    size="sm"
                   >
                     Approve All
                   </Button>
@@ -719,26 +708,26 @@ export default function ExamSessionDetail() {
                   {waitingData?.data?.waitingStudents?.map((student: any) => (
                     <div
                       key={student._id}
-                      className="p-3 bg-gray-50 rounded border border-gray-200 flex items-center justify-between"
+                      className="p-3 bg-muted rounded border border-border flex items-center justify-between"
                     >
                       <div className="flex-1 space-y-1">
-                        <p className="font-medium text-sm text-gray-900">
+                        <p className="font-medium text-sm text-foreground">
                           {student.name}
                         </p>
-                        <p className="text-xs text-gray-600">
-                          {student.email}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{student.email}</p>
                         {student.computerOrder != null && (
-                          <p className="text-xs text-orange-600 mt-0.5 font-medium">
+                          <p className="text-xs text-warning mt-0.5 font-medium">
                             Order: {student.computerOrder}
                           </p>
                         )}
                       </div>
                       <div className="flex gap-2">
                         <Button
-                          onClick={() => approveWaitingMutation.mutate(student._id)}
+                          onClick={() =>
+                            approveWaitingMutation.mutate(student._id)
+                          }
                           disabled={approveWaitingMutation.isPending}
-                          className="bg-primary hover:bg-primary/80 text-white px-2 py-1 text-xs cursor-pointer"
+                          size="sm"
                         >
                           Approve
                         </Button>
@@ -750,16 +739,20 @@ export default function ExamSessionDetail() {
             )}
 
             {/* Students List Card */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <div className="text-lg font-semibold text-gray-900 mb-4 flex justify-between ">
-                <span>Joined Students</span> <span className="tracking-wider">{students.filter((s:any) => s.isSubmitted).length}/{students.length}</span> 
+            <div className="bg-card rounded-lg border border-border p-6">
+              <div className="text-lg font-semibold text-foreground mb-4 flex justify-between ">
+                <span>Joined Students</span>{" "}
+                <span className="tracking-wider text-foreground">
+                  {students.filter((s: any) => s.isSubmitted).length}/
+                  {students.length}
+                </span>
               </div>
-                {students.length > 0 ? (
+              {students.length > 0 ? (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {students.map((item: any) => (
                     <div
                       key={item.student._id}
-                      className="p-3 bg-gray-50 rounded border border-gray-200 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-colors group"
+                      className="p-3 bg-muted rounded border border-border hover:border-foreground/20 cursor-pointer transition-colors group"
                       onClick={() =>
                         setActivityStudent({
                           _id: item.student._id,
@@ -772,20 +765,20 @@ export default function ExamSessionDetail() {
                     >
                       <div className="flex justify-between items-start">
                         <div className="space-y-1">
-                          <p className="font-medium text-sm text-gray-900">
-                            {item.computerOrder ? `${item.computerOrder} - ` : ""} {item.student.name}
+                          <p className="font-medium text-sm text-foreground">
+                            {item.computerOrder
+                              ? `${item.computerOrder} - `
+                              : ""}{" "}
+                            {item.student.name}
                           </p>
-                          <p className="text-xs text-gray-600">
+                          <p className="text-xs text-muted-foreground">
                             {item.student.email}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           {item.isSubmitted && (
-                            <span className="text-xs font-semibold bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full border border-green-200">
-                              Submitted
-                            </span>
+                            <Badge variant="success">Submitted</Badge>
                           )}
-
                         </div>
                       </div>
                       <div className="flex justify-between items-end mt-2">
@@ -795,12 +788,16 @@ export default function ExamSessionDetail() {
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          <span className="text-[11px] font-medium text-gray-700 py-1 rounded">
+                          <span className="text-[11px] font-medium text-muted-foreground py-1 rounded">
                             Joins: {item.joinCount || 0}
                           </span>
-                          <span className={`text-[11px] font-medium py-1 rounded ${
-                            (item.tabSwitchCount || 0) > 0 ? "text-red-600" : "text-gray-700"
-                          }`}>
+                          <span
+                            className={`text-[11px] font-medium py-1 rounded ${
+                              (item.tabSwitchCount || 0) > 0
+                                ? "text-destructive"
+                                : "text-muted-foreground"
+                            }`}
+                          >
                             Tab switch: {item.tabSwitchCount || 0}
                           </span>
                         </div>
@@ -809,7 +806,7 @@ export default function ExamSessionDetail() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 italic text-center py-4">
+                <p className="text-sm text-muted-foreground italic text-center py-4">
                   No students joined yet
                 </p>
               )}
@@ -826,8 +823,6 @@ export default function ExamSessionDetail() {
           onClose={() => setActivityStudent(null)}
         />
       )}
-
-
     </div>
   );
 }

@@ -11,6 +11,27 @@ import { normalizeEmails } from "../services/studentEmail.js";
 
 const examSessionRouter = Router();
 
+/**
+ * Resolve the MongoDB user document for the current request.
+ *
+ * Prefers `req.dbUser` (loaded by the policy middleware via `googleId`),
+ * but falls back to looking the user up directly so that routes which use
+ * only `isAuthenticated` (and the legacy passport mocks in tests) still work.
+ *
+ * `req.user` from `deserializeUser` is the MongoDB document itself, so
+ * `req.user.id` is the Mongoose virtual getter for `_id` — NOT the googleId
+ * string. Looking the user up by that `_id` as a `googleId` always returns
+ * `null`, which used to crash routes that did `user.role` directly.
+ */
+async function resolveCurrentUser(req) {
+  if (req.dbUser) return req.dbUser;
+  const googleId =
+    req.user?.googleId ||
+    (typeof req.user?.id === "string" ? req.user.id : undefined);
+  if (!googleId) return null;
+  return UserModel.findOne({ googleId });
+}
+
 // --- SSE Setup ---
 export const sseClients = new Map();
 
@@ -292,7 +313,7 @@ examSessionRouter.get(
         session.status === "ongoing" && now < new Date(session.endTime);
 
       // Check if this student already has a computerOrder for this session
-      const user = await UserModel.findOne({ googleId: req.user.id });
+      const user = await resolveCurrentUser(req);
       let hasComputerOrder = false;
       if (user) {
         const existingCode = await StudentExamCodeModel.findOne({
@@ -349,7 +370,7 @@ examSessionRouter.get(
 // Get available exam sessions for students (Student only)
 examSessionRouter.get("/available", isAuthenticated, async (req, res) => {
   try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
+    const user = await resolveCurrentUser(req);
 
     if (!user || user.role !== "student") {
       return res.status(403).json({ error: "Student only endpoint" });
@@ -435,7 +456,7 @@ examSessionRouter.get("/available", isAuthenticated, async (req, res) => {
 // Join exam session (Student - validate access key)
 examSessionRouter.post("/:id/join", isAuthenticated, async (req, res) => {
   try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
+    const user = await resolveCurrentUser(req);
 
     if (!user || user.role !== "student") {
       return res.status(403).json({ error: "Student only endpoint" });
@@ -506,14 +527,21 @@ examSessionRouter.post("/:id/join", isAuthenticated, async (req, res) => {
 // Get session details
 examSessionRouter.get("/:id", isAuthenticated, async (req, res) => {
   try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
+    const user = await resolveCurrentUser(req);
 
     let session;
+    if (!user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
     if (user.role === "lecturer") {
       session = await ExamSessionModel.findOne({
         _id: req.params.id,
         createdBy: user._id,
       }).populate("examTemplateId");
+    } else if (user.isSuperAdmin || user.role === "admin") {
+      // Super-admins / admins can inspect any session (e.g. via lecturer URLs).
+      session = await ExamSessionModel.findById(req.params.id)
+        .populate("examTemplateId");
     } else {
       session = await ExamSessionModel.findById(req.params.id)
         .populate("examTemplateId")
@@ -772,9 +800,9 @@ examSessionRouter.post(
   isAuthenticated,
   async (req, res) => {
     try {
-      const user = await UserModel.findOne({ googleId: req.user.id });
+      const user = await resolveCurrentUser(req);
 
-      if (user.role !== "student") {
+      if (!user || user.role !== "student") {
         return res.status(403).json({ error: "Student only endpoint" });
       }
 
@@ -881,10 +909,10 @@ examSessionRouter.post(
 // Get exam for student (after assigned code)
 examSessionRouter.get("/:id/exam", isAuthenticated, async (req, res) => {
   try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
+    const user = await resolveCurrentUser(req);
 
     if (!user) {
-      console.log("User not found in DB for googleId:", req.user.id);
+      console.log("User not found in DB for googleId:", req.user?.googleId);
       return res.status(403).json({ error: "User not found" });
     }
 
@@ -1069,9 +1097,9 @@ examSessionRouter.post(
   isAuthenticated,
   async (req, res) => {
     try {
-      const user = await UserModel.findOne({ googleId: req.user.id });
+      const user = await resolveCurrentUser(req);
 
-      if (user.role !== "student") {
+      if (!user || user.role !== "student") {
         return res.status(403).json({ error: "Student only endpoint" });
       }
 

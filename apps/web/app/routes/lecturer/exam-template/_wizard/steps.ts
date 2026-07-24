@@ -79,6 +79,11 @@ export function validateCodesStep(codes: ExamCode[]): StepValidation {
             `Code ${c.codeNumber} · Q${q.questionNumber} · TC${ti + 1}: expected output required.`,
           );
         }
+        if (!tc.testFile) {
+          issues.push(
+            `Code ${c.codeNumber} · Q${q.questionNumber} · TC${ti + 1}: test file required.`,
+          );
+        }
       });
     });
   });

@@ -2,7 +2,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { examTemplateAPI } from "~/lib/api";
 import { Button } from "~/components/ui/button";
-import { Plus, Trash2, Edit, FileText, Clock, Code, Search, Share2, Loader2 } from "lucide-react";
+import { Badge } from "~/components/ui/badge";
+import {
+  Plus,
+  Trash2,
+  Edit,
+  FileText,
+  Clock,
+  Code,
+  Search,
+  Share2,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useState, useMemo } from "react";
 import {
@@ -14,6 +25,7 @@ import {
   DialogFooter,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 
 export default function ExamTemplateList() {
   const navigate = useNavigate();
@@ -69,8 +81,7 @@ export default function ExamTemplateList() {
       setShareTemplateId(null);
     },
     onError: (error: any) => {
-      const msg =
-        error?.response?.data?.error || "Failed to share template";
+      const msg = error?.response?.data?.error || "Failed to share template";
       toast.error(msg);
     },
   });
@@ -90,42 +101,44 @@ export default function ExamTemplateList() {
   const templates = data?.data?.templates || [];
   const [query, setQuery] = useState("");
   const filtered = useMemo(
-    () => templates.filter((t: any) => t.templateName.toLowerCase().includes(query.toLowerCase())),
-    [templates, query]
+    () =>
+      templates.filter((t: any) =>
+        t.templateName.toLowerCase().includes(query.toLowerCase()),
+      ),
+    [templates, query],
   );
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-gray-600 mt-4">Loading templates...</p>
+          <p className="text-muted-foreground mt-4">Loading templates...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div>
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Exam Templates</h1>
+            <h1 className="text-2xl font-bold text-foreground">Exam Templates</h1>
             <div className="flex items-center gap-3 ">
               <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                <input
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <Input
                   type="text"
                   placeholder="Search templates..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-primary w-52"
+                  className="pl-8 w-52"
                 />
               </div>
               <Button
                 onClick={() => navigate("/lecturer/exam-templates/create")}
-                className="bg-primary hover:bg-primary/80 text-white cursor-pointer"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create Template
@@ -138,19 +151,17 @@ export default function ExamTemplateList() {
       {/* Templates Grid */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {filtered.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="bg-card rounded-lg border border-border p-12 text-center">
+            <h3 className="text-lg font-medium text-foreground mb-2">
               {query ? "No templates found" : "No templates yet"}
             </h3>
             {!query && (
               <>
-                <p className="text-gray-600 mb-6">
+                <p className="text-muted-foreground mb-6">
                   Create your first exam template to get started
                 </p>
                 <Button
                   onClick={() => navigate("/lecturer/exam-templates/create")}
-                  className="bg-primary hover:bg-primary/80 text-white cursor-pointer"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Template
@@ -163,23 +174,19 @@ export default function ExamTemplateList() {
             {filtered.map((template: any) => (
               <div
                 key={template._id}
-                className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                className="bg-card rounded-lg border border-border hover:border-foreground/20 transition-colors"
               >
                 <div className="p-6">
                   {/* Header */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">
+                      <h3 className="font-semibold text-foreground mb-1">
                         {template.templateName}
                       </h3>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs px-2 py-0.5 bg-blue-100 text-primary rounded">
-                          {template.examType}
-                        </span>
+                        <Badge variant="info">{template.examType}</Badge>
                         {template.isPublished && (
-                          <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
-                            Published
-                          </span>
+                          <Badge variant="success">Published</Badge>
                         )}
                       </div>
                     </div>
@@ -187,7 +194,7 @@ export default function ExamTemplateList() {
 
                   {/* Stats */}
                   <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <FileText className="w-4 h-4" />
                       <span>
                         {template.examCodeCount ||
@@ -197,19 +204,19 @@ export default function ExamTemplateList() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Code className="w-4 h-4" />
                       <span className="capitalize">{template.language}</span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="w-4 h-4" />
                       <span>{template.duration} minutes</span>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2 pt-4 border-t border-border">
                     <Button
                       variant="outline"
                       size="sm"
@@ -218,7 +225,7 @@ export default function ExamTemplateList() {
                           `/lecturer/exam-templates/${template._id}/edit`,
                         )
                       }
-                      className="flex-1 cursor-pointer"
+                      className="flex-1"
                     >
                       <Edit className="w-3 h-3 mr-1" />
                       Edit
@@ -226,8 +233,9 @@ export default function ExamTemplateList() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleOpenShare(template._id, template.templateName)}
-                      className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 cursor-pointer"
+                      onClick={() =>
+                        handleOpenShare(template._id, template.templateName)
+                      }
                       title="Share template"
                     >
                       <Share2 className="w-3 h-3" />
@@ -235,8 +243,10 @@ export default function ExamTemplateList() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleOpenDelete(template._id, template.templateName)}
-                      className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 cursor-pointer"
+                      onClick={() =>
+                        handleOpenDelete(template._id, template.templateName)
+                      }
+                      className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
@@ -252,13 +262,14 @@ export default function ExamTemplateList() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
+            <DialogTitle className="flex items-center gap-2 text-destructive">
               <Trash2 className="w-5 h-5" />
               Delete Template
             </DialogTitle>
             <DialogDescription>
               Are you sure you want to delete{" "}
-              <strong>"{deleteTargetName}"</strong>? This action cannot be undone.
+              <strong>"{deleteTargetName}"</strong>? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
@@ -266,19 +277,24 @@ export default function ExamTemplateList() {
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
               disabled={deleteMutation.isPending}
-              className="cursor-pointer"
             >
               Cancel
             </Button>
             <Button
+              variant="destructive"
               onClick={handleConfirmDelete}
               disabled={deleteMutation.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
             >
               {deleteMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Deleting...</>
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
               ) : (
-                <><Trash2 className="w-4 h-4 mr-2" />Delete</>
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </>
               )}
             </Button>
           </DialogFooter>
@@ -291,15 +307,14 @@ export default function ExamTemplateList() {
           <DialogHeader>
             <DialogTitle>Share Template</DialogTitle>
             <DialogDescription>
-              Share "<strong>{shareTemplateName}</strong>" by entering the recipient's email address.
-              A copy will be created in their account.
+              Share "<strong>{shareTemplateName}</strong>" by entering the
+              recipient's email address. A copy will be created in their
+              account.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <label htmlFor="share-email" className="text-sm font-medium text-gray-700">
-                Recipient Email
-              </label>
+              <Label htmlFor="share-email">Recipient Email</Label>
               <Input
                 id="share-email"
                 type="email"
@@ -320,14 +335,12 @@ export default function ExamTemplateList() {
               variant="outline"
               onClick={() => setShareDialogOpen(false)}
               disabled={shareMutation.isPending}
-              className="cursor-pointer"
             >
               Cancel
             </Button>
             <Button
               onClick={handleShare}
               disabled={!shareEmail.trim() || shareMutation.isPending}
-              className="bg-primary hover:bg-primary/80 text-white cursor-pointer"
             >
               {shareMutation.isPending ? (
                 <>

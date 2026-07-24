@@ -62,7 +62,7 @@ export default function AuthenticatedShell({
         aria-label={`${roleLabel} navigation`}
         className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col fixed inset-y-0 z-50"
       >
-        <div className="flex items-center gap-3 px-6 h-16 border-b border-sidebar-border">
+        <div className="flex items-center gap-3 px-6 h-16 ">
           <Logo size="sm" />
           <div className="flex flex-col">
             <span className="font-semibold text-foreground tracking-tight">

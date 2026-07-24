@@ -1,30 +1,38 @@
 /**
  * Step 2 — Codes & questions.
  *
- * Combined from the old Step 2 (exam codes) and Step 3 (questions).
- * Code tabs at the top let you switch between paper versions, and the
- * currently active code's PDF + question accordion render below — so
- * you can set up a complete paper without leaving this step.
+ * Layout: a single surface with three distinct vertical sections.
+ * 1. Tab strip — one tab per code, plus an explicit Add code button.
+ * 2. Identity card — name, status, and PDF for the active code.
+ *    The card is split into two rows so naming and PDF never collide.
+ * 3. Questions list — per-question accordion, expanded by default
+ *    for the first question so the user can see the shape.
+ *
+ * Status indicators (ready / incomplete) render via `<Badge>` variants so
+ * the wizard follows the same status-voice as the rest of the app.
  */
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Badge } from "~/components/ui/badge";
 import {
   Dialog,
   DialogClose,
   DialogContent,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
 import {
   Plus,
   Upload,
-  Eye,
   FileText,
   CheckCircle2,
   AlertCircle,
-  MoreHorizontal,
+  Trash2,
+  Eye,
+  ExternalLink,
 } from "lucide-react";
 import type { UseTemplateStateResult } from "./useTemplateState";
 import type { ExamCode } from "./types";
@@ -52,16 +60,15 @@ export function StepCodesAndQuestions({
 
   return (
     <section className="rounded-xl border border-border bg-card overflow-hidden">
-      {/* Code tabs (sticky so they stay visible while scrolling questions) */}
+      {/* ── 1. Tab strip ───────────────────────────────────────────────── */}
       <div
         role="tablist"
         aria-label="Exam codes"
-        className="sticky top-0 z-20 flex items-end overflow-x-auto px-2 bg-card border-b border-border"
+        className="sticky top-0 z-20 flex items-end gap-1 px-4 pt-2 bg-card border-b border-border overflow-x-auto overflow-y-hidden"
       >
         {examCodes.map((c, ci) => {
           const active = ci === activeCodeIndex;
-          const filled = !!(c.pdfFile || c.pdfUrl);
-          const ready = filled && c.questions.length > 0;
+          const ready = checkCodeReady(c);
           return (
             <button
               key={ci}
@@ -70,140 +77,131 @@ export function StepCodesAndQuestions({
               aria-selected={active}
               onClick={() => onActiveCodeChange(ci)}
               className={cn(
-                "group relative flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors duration-(--motion-fast) ease-(--motion-ease) cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "group relative flex items-center gap-2 px-3 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 active
                   ? "border-primary text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
               )}
             >
-              <span className="font-mono text-[10px] text-muted-foreground group-aria-selected:text-primary tabular-nums">
-                {String(ci + 1).padStart(2, "0")}
-              </span>
-              <span className="truncate max-w-40">
-                {c.codeNumber ? `Code ${c.codeNumber}` : "Untitled code"}
+              <span className="truncate max-w-32">
+                {c.codeNumber ? `Code ${c.codeNumber}` : `Code ${ci + 1}`}
               </span>
               {ready ? (
-                <CheckCircle2
-                  className="w-3 h-3 text-success shrink-0"
-                  aria-label="Ready"
-                />
+                <Badge variant="success" className="text-[10px]">
+                  Ready
+                </Badge>
               ) : (
-                <AlertCircle
-                  className="w-3 h-3 text-warning shrink-0"
-                  aria-label="Incomplete"
-                />
+                <Badge variant="warning" className="text-[10px]">
+                  Incomplete
+                </Badge>
               )}
             </button>
           );
         })}
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={addExamCode}
-          className="ml-1 inline-flex items-center gap-1 px-2 py-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-(--motion-fast) ease-(--motion-ease) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="ml-2 mb-1.5"
         >
-          <Plus className="w-3.5 h-3.5" /> Add code
-        </button>
+          <Plus className="w-3.5 h-3.5 mr-1" /> Add code
+        </Button>
       </div>
 
-      {/* Active code identity row + PDF (single row, dense) */}
+      {/* ── 2. Identity card ───────────────────────────────────────────── */}
       {code && (
-        <div className="px-4 py-3 flex items-center gap-2 bg-muted/20 border-b border-border flex-wrap">
-          <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-            <span className="font-mono tabular-nums">{activeCodeIndex + 1}</span>
-            <span className="opacity-50">/</span>
-            <span className="font-mono tabular-nums">{examCodes.length}</span>
+        <div className="px-6 py-5 border-b border-border bg-card">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex flex-row gap-1">
+                <Label
+                  htmlFor="codeNumber"
+                  className="text-xs text-muted-foreground"
+                >
+                  Code label
+                </Label>
+                <Input
+                  id="codeNumber"
+                  value={code.codeNumber}
+                  onChange={(e) =>
+                    state.updateExamCodeField(
+                      activeCodeIndex,
+                      "codeNumber",
+                      e.target.value,
+                    )
+                  }
+                  placeholder="e.g. A, B, 1, 2"
+                  className="h-8 w-24 text-sm font-mono"
+                />
+              </div>
+            </div>
+
+            <CodeStatusBadge code={code} />
+
+            {examCodes.length > 1 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Delete code ${code.codeNumber || activeCodeIndex + 1}? All questions inside will be removed.`,
+                    )
+                  ) {
+                    removeExamCode(activeCodeIndex);
+                  }
+                }}
+                className="shrink-0"
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                Delete code
+              </Button>
+            )}
           </div>
 
-          <div className="h-4 w-px bg-border shrink-0" />
-
-          <div className="inline-flex items-center gap-1.5 shrink-0">
-            <Label
-              htmlFor="codeNumber"
-              className="text-xs text-muted-foreground"
-            >
-              Code
-            </Label>
-            <Input
-              id="codeNumber"
-              value={code.codeNumber}
-              onChange={(e) =>
-                state.updateExamCodeField(
-                  activeCodeIndex,
-                  "codeNumber",
-                  e.target.value,
-                )
-              }
-              placeholder="1"
-              className="h-7 w-16 text-xs font-mono tabular-nums"
-            />
-          </div>
-
-          <div className="h-4 w-px bg-border shrink-0" />
-
-          <div className="ml-auto flex items-center gap-2 min-w-0 max-w-full">
-            <PdfField
-              code={code}
-              onChange={(f) => setPdfFile(activeCodeIndex, f)}
-              onPreview={openPreview}
-            />
-          </div>
-
-          {examCodes.length > 1 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (
-                  window.confirm(
-                    `Delete code ${code.codeNumber || "(empty)"}? All questions inside will be removed.`,
-                  )
-                ) {
-                  removeExamCode(activeCodeIndex);
-                }
-              }}
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
-              aria-label="Delete this code"
-              title="Delete this code"
-            >
-              <MoreHorizontal className="w-3.5 h-3.5" />
-            </Button>
-          )}
+          <PdfField
+            code={code}
+            onChange={(f) => setPdfFile(activeCodeIndex, f)}
+            onPreview={openPreview}
+          />
         </div>
       )}
 
-      {/* Active code: questions */}
+      {/* ── 3. Questions list ──────────────────────────────────────────── */}
       {code && (
-        <div className="px-4 py-4 bg-background">
+        <div className="px-6 py-6 bg-background">
           <QuestionsEditor state={state} activeCodeIndex={activeCodeIndex} />
         </div>
       )}
 
-      <Dialog
-        open={!!previewPdf}
-        onOpenChange={(open) => !open && setPreviewPdf(null)}
-      >
-        <DialogContent
-          showCloseButton={false}
-          className="!max-w-none w-[90vw] h-[90vh] p-0 pb-2 gap-0"
-        >
-          <DialogTitle></DialogTitle>
-          <div className="h-[85vh]">
-            {previewPdf && (
-              <iframe
-                src={previewPdf}
-                className="w-full h-full rounded-t-md"
-                title="PDF preview"
-              />
-            )}
-          </div>
-          <DialogFooter className="h-[5vh] flex items-center border-t border-border px-4">
-            <DialogClose asChild>
-              <Button variant="outline">Close</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PdfPreviewDialog url={previewPdf} onClose={() => setPreviewPdf(null)} />
     </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                Code status                                 */
+/* -------------------------------------------------------------------------- */
+
+function checkCodeReady(code: ExamCode): boolean {
+  const hasPdf = !!(code.pdfFile || code.pdfUrl);
+  const hasQuestions = code.questions.length > 0;
+  return hasPdf && hasQuestions;
+}
+
+function CodeStatusBadge({ code }: { code: ExamCode }) {
+  const ready = checkCodeReady(code);
+  if (ready) {
+    return (
+      <Badge variant="success">
+        <CheckCircle2 className="w-3 h-3" /> Ready
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="warning">
+      <AlertCircle className="w-3 h-3" /> Incomplete
+    </Badge>
   );
 }
 
@@ -221,63 +219,101 @@ function PdfField({
   onPreview: () => void;
 }) {
   const hasFile = !!code.pdfFile || !!code.pdfUrl;
-  const filename = code.pdfFile?.name;
+  const filename = code.pdfFile?.name ?? "Currently saved PDF";
+
+  if (!hasFile) {
+    return (
+      <label className="flex items-center gap-3 px-4 py-3 border border-dashed border-border rounded-md bg-muted/40 cursor-pointer hover:bg-muted hover:border-foreground/30 transition-colors">
+        <Upload className="w-4 h-4 text-muted-foreground shrink-0" />
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span className="text-sm font-medium text-foreground">
+            Upload reference PDF
+          </span>
+          <span className="text-xs text-muted-foreground">
+            The paper / question sheet students will read during the exam.
+          </span>
+        </div>
+        <input
+          type="file"
+          accept=".pdf"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onChange(f);
+            e.target.value = "";
+          }}
+        />
+      </label>
+    );
+  }
 
   return (
-    <div className="flex items-center gap-2 min-w-0">
-      <Upload className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-
-      {hasFile ? (
-        <>
-          <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
-          <span className="text-xs font-mono text-foreground truncate min-w-0 flex-1">
-            {filename ?? "Currently saved PDF"}
-          </span>
-          <label
-            className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer px-1.5 py-0.5 rounded hover:bg-muted transition-colors duration-(--motion-fast) ease-(--motion-ease) shrink-0"
-            title="Replace PDF"
-          >
-            Replace
-            <input
-              type="file"
-              accept=".pdf"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) onChange(f);
-                e.target.value = "";
-              }}
-            />
-          </label>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onPreview}
-            className="h-6 px-2 text-[11px] shrink-0"
-            aria-label="Preview PDF"
-          >
-            <Eye className="w-3 h-3 mr-1" /> Preview
-          </Button>
-        </>
-      ) : (
-        <label
-          className="inline-flex items-center gap-1.5 px-2 py-1 border border-dashed border-border rounded text-[11px] text-muted-foreground cursor-pointer hover:bg-muted hover:text-foreground hover:border-foreground/30 transition-colors duration-(--motion-fast) ease-(--motion-ease) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shrink-0"
-          title="Upload PDF"
-        >
-          Upload PDF
-          <input
-            type="file"
-            accept=".pdf"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onChange(f);
-              e.target.value = "";
-            }}
-          />
-        </label>
-      )}
+    <div className="flex items-center gap-3 px-4 py-3 border border-border rounded-md bg-muted/40">
+      <FileText className="w-4 h-4 text-primary shrink-0" />
+      <span className="text-sm font-mono text-foreground truncate flex-1 min-w-0">
+        {filename}
+      </span>
+      <Button type="button" variant="outline" size="sm" onClick={onPreview}>
+        <Eye className="w-3.5 h-3.5 mr-1" />
+        Preview
+      </Button>
+      <label className="text-xs text-muted-foreground hover:text-foreground cursor-pointer px-2 py-1 rounded hover:bg-muted transition-colors shrink-0">
+        Replace
+        <input
+          type="file"
+          accept=".pdf"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onChange(f);
+            e.target.value = "";
+          }}
+        />
+      </label>
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              PDF preview dialog                             */
+/* -------------------------------------------------------------------------- */
+
+function PdfPreviewDialog({
+  url,
+  onClose,
+}: {
+  url: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={!!url} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="!max-w-none w-[90vw] h-[90vh] p-0 gap-0 overflow-hidden"
+      >
+        <DialogHeader className="border-b border-border px-4 py-3">
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            PDF preview
+          </DialogTitle>
+        </DialogHeader>
+        <div className="h-[calc(90vh-7rem)] bg-muted">
+          {url && (
+            <iframe src={url} className="w-full h-full" title="PDF preview" />
+          )}
+        </div>
+        <DialogFooter className="border-t border-border px-4 py-3">
+          <Button variant="outline" asChild>
+            <a href={url ?? "#"} target="_blank" rel="noreferrer">
+              <ExternalLink className="w-3.5 h-3.5 mr-1" />
+              Open in new tab
+            </a>
+          </Button>
+          <DialogClose asChild>
+            <Button variant="default">Close</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

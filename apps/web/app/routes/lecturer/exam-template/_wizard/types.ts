@@ -54,7 +54,7 @@ export function emptyTestCase(): TestCase {
 export function emptyQuestion(questionNumber: number): Question {
   return {
     questionNumber,
-    title: "",
+    title: `Question ${questionNumber}`,
     testCases: [emptyTestCase()],
     starterFiles: [],
   };

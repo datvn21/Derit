@@ -27,10 +27,6 @@ export function StepTemplateInfo({ state }: { state: UseTemplateStateResult }) {
         <h2 className="text-lg font-semibold text-foreground">
           Template information
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          The basics. Students see the template name and duration when they join
-          an exam based on this template.
-        </p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
