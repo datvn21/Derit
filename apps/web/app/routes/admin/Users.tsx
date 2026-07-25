@@ -471,7 +471,7 @@ export default function AdminUsers() {
           <div className="space-y-4 py-4">
             <div>
               <Label>Email</Label>
-              <Input value={selectedUser?.email} disabled />
+              <Input value={selectedUser?.email ?? ""} disabled />
             </div>
             <div>
               <Label htmlFor="edit-name">Name</Label>

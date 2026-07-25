@@ -9,13 +9,18 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./tests/e2e",
-  fullyParallel: true,
+  timeout: 120 * 1000,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: "list",
   use: {
     baseURL: process.env.E2E_BASE_URL || "http://localhost:5173",
+    headless: false,
+    launchOptions: {
+      slowMo: Number(process.env.E2E_SLOW_MO || 150),
+    },
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -37,4 +42,3 @@ export default defineConfig({
         stderr: "pipe",
       },
 });
-

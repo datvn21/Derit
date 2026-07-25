@@ -311,7 +311,7 @@ export default function StudentDashboard() {
         <DialogContent className="px-8 py-8" showCloseButton={false}>
           <DialogHeader>
             <DialogTitle></DialogTitle>
-            <DialogDescription>
+            <div className="text-muted-foreground text-sm">
               {selectedExam && (
                 <div className="rounded px-2 font-semibold flex flex-col gap-2 mx-auto text-start w-full">
                   <p className="font-semibold text-center text-xl text-foreground mb-4">
@@ -340,7 +340,7 @@ export default function StudentDashboard() {
                   </div>
                 </div>
               )}
-            </DialogDescription>
+            </div>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

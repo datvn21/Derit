@@ -1,7 +1,10 @@
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
+
+const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 export default defineConfig({
   plugins: [
@@ -27,7 +30,10 @@ export default defineConfig({
     ],
   },
   server: {
-    allowedHosts: true
+    allowedHosts: true,
+    fs: {
+      allow: [repoRoot],
+    },
   },
   test: {
     globals: true,

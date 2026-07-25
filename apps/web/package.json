@@ -46,6 +46,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.61.1",
     "@react-router/dev": "7.10.1",
     "@tailwindcss/vite": "^4.1.13",

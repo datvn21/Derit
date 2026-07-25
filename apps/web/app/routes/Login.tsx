@@ -111,7 +111,7 @@ export default function Login() {
 
         {studentRegAllowed && allowedDomains.length > 0 && (
           <p className="font-medium text-sm text-muted-foreground text-center flex items-center justify-center space-x-1">
-            <p className="text-destructive mr-1">*</p>
+            <span className="text-destructive mr-1">*</span>
             Student: ***@{allowedDomains.join(" or ***@")}
           </p>
         )}
