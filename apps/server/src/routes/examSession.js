@@ -774,7 +774,7 @@ const assignExamCodeAndCreateRecords = async (
         computerOrder: computerOrder || null,
       },
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
   );
 
   // Idempotent submission creation — uses upsert + unique compound index.
@@ -870,7 +870,7 @@ examSessionRouter.post(
             examCodeNumber: assignedCode.codeNumber,
           },
         },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: "after" },
       );
 
       await StudentSubmissionModel.updateOne(

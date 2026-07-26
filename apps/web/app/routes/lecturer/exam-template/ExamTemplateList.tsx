@@ -236,6 +236,7 @@ export default function ExamTemplateList() {
                       onClick={() =>
                         handleOpenShare(template._id, template.templateName)
                       }
+                      aria-label={`Share ${template.templateName}`}
                       title="Share template"
                     >
                       <Share2 className="w-3 h-3" />
@@ -247,6 +248,8 @@ export default function ExamTemplateList() {
                         handleOpenDelete(template._id, template.templateName)
                       }
                       className="text-destructive hover:text-destructive"
+                      aria-label={`Delete ${template.templateName}`}
+                      title={`Delete ${template.templateName}`}
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>

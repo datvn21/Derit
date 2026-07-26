@@ -7,12 +7,21 @@ import { isLecturerOrAdmin } from "../middleware/isLecturerOrAdmin.js";
 
 const resultRouter = Router();
 
+async function resolveCurrentUser(req) {
+  if (req.dbUser) return req.dbUser;
+  const googleId =
+    req.user?.googleId ||
+    (typeof req.user?.id === "string" ? req.user.id : undefined);
+  if (!googleId) return null;
+  return UserModel.findOne({ googleId });
+}
+
 // Get my result for exam session (Student only)
 resultRouter.get("/exam/:sessionId", isAuthenticated, async (req, res) => {
   try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
+    const user = await resolveCurrentUser(req);
 
-    if (user.role !== "student") {
+    if (!user || user.role !== "student") {
       return res.status(403).json({ error: "Student only endpoint" });
     }
 
@@ -36,9 +45,9 @@ resultRouter.get("/exam/:sessionId", isAuthenticated, async (req, res) => {
 // Get all my exam results (Student only)
 resultRouter.get("/history", isAuthenticated, async (req, res) => {
   try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
+    const user = await resolveCurrentUser(req);
 
-    if (user.role !== "student") {
+    if (!user || user.role !== "student") {
       return res.status(403).json({ error: "Student only endpoint" });
     }
 

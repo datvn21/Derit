@@ -415,6 +415,7 @@ if __name__ == "__main__":
               onClick={() => setShowNewFileInput(!showNewFileInput)}
               className="hover:bg-[#3c3c3c] text-gray-400 rounded p-1 cursor-pointer"
               title="New File"
+              aria-label="New File"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -470,6 +471,8 @@ if __name__ == "__main__":
                         removeFile(index);
                       }}
                       className="opacity-0 group-hover:opacity-100 hover:text-red-400 p-1 text-gray-500 cursor-pointer"
+                      title={`Delete ${file.name}`}
+                      aria-label={`Delete ${file.name}`}
                     >
                       <X className="w-3 h-3" />
                     </button>

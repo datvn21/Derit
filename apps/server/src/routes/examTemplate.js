@@ -1,5 +1,6 @@
 import { Router } from "express";
 import ExamTemplateModel from "../models/ExamTemplate.js";
+import UserModel from "../models/User.js";
 import { isAuthenticated } from "../middleware/middlewareAuth.js";
 import { isLecturerOrAdmin } from "../middleware/isLecturerOrAdmin.js";
 

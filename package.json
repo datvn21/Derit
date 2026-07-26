@@ -13,6 +13,7 @@
     "test:integration": "npm --workspace apps/server run test:integration",
     "test:web": "npm --workspace apps/web run test",
     "test:e2e": "npm --workspace apps/web run test:e2e",
+    "test:e2e:real": "npm --workspace apps/web run test:e2e:real",
     "test:e2e:headed": "npm --workspace apps/web run test:e2e",
     "test:e2e:slow": "E2E_SLOW_MO=2000 npm --workspace apps/web run test:e2e",
     "test:all": "npm run test:unit && npm run test:integration",

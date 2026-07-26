@@ -20,6 +20,7 @@ import { swaggerSpec } from "./src/config/swagger.js";
 import MongoStore from "connect-mongo";
 import { initNsjailExecutor, cleanupNsjailExecutor } from "./src/services/nsjailExecutor.js";
 import adminRouter from "./src/routes/admin.js";
+import e2eSupportRouter from "./src/routes/e2eSupport.js";
 
 dotenv.config();
 
@@ -147,6 +148,9 @@ app.use("/results", resultRouter);
 app.use("/upload", uploadRouter);
 app.use("/classrooms", classroomRouter);
 app.use("/admin", adminRouter);
+if (process.env.E2E_TEST_MODE === "true") {
+  app.use("/__e2e", e2eSupportRouter);
+}
 
 // Centralised error handler — never leak stack traces to clients
 app.use((err, req, res, _next) => {

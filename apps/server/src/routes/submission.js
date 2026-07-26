@@ -27,6 +27,15 @@ function normalizeCode(code) {
 
 const submissionRouter = Router();
 
+async function resolveCurrentUser(req) {
+  if (req.dbUser) return req.dbUser;
+  const googleId =
+    req.user?.googleId ||
+    (typeof req.user?.id === "string" ? req.user.id : undefined);
+  if (!googleId) return null;
+  return UserModel.findOne({ googleId });
+}
+
 // ─── G: Bounded in-memory rate limiter for /run-console ────────────────────────
 // Production deployments should swap this for a Redis-backed limiter
 // shared between processes.
@@ -89,9 +98,9 @@ function emitSSEResult(key, data) {
 // Submit code for a question (Student only)
 submissionRouter.post("/", isAuthenticated, async (req, res) => {
   try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
+    const user = await resolveCurrentUser(req);
 
-    if (user.role !== "student") {
+    if (!user || user.role !== "student") {
       return res.status(403).json({ error: "Student only endpoint" });
     }
 
@@ -554,7 +563,7 @@ submissionRouter.get("/:id/events", isAuthenticated, (req, res) => {
 // Get submission status (Student only)
 submissionRouter.get("/:id", isAuthenticated, async (req, res) => {
   try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
+    const user = await resolveCurrentUser(req);
 
     const submission = await StudentSubmissionModel.findById(
       req.params.id,
@@ -566,7 +575,7 @@ submissionRouter.get("/:id", isAuthenticated, async (req, res) => {
 
     // Students can only view their own submissions
     if (
-      user.role === "student" &&
+      user?.role === "student" &&
       submission.studentId._id.toString() !== user._id.toString()
     ) {
       return res.status(403).json({ error: "Access denied" });
@@ -581,9 +590,9 @@ submissionRouter.get("/:id", isAuthenticated, async (req, res) => {
 // Get my submissions for an exam session (Student only)
 submissionRouter.get("/exam/:sessionId", isAuthenticated, async (req, res) => {
   try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
+    const user = await resolveCurrentUser(req);
 
-    if (user.role !== "student") {
+    if (!user || user.role !== "student") {
       return res.status(403).json({ error: "Student only endpoint" });
     }
 
@@ -913,8 +922,8 @@ submissionRouter.get(
 // Run code freely without saving/grading – returns stdout/stderr immediately (Student only)
 submissionRouter.post("/run-console", isAuthenticated, runConsoleLimiter, async (req, res) => {
   try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
-    if (user.role !== "student") {
+    const user = await resolveCurrentUser(req);
+    if (!user || user.role !== "student") {
       return res.status(403).json({ error: "Student only endpoint" });
     }
 
@@ -945,8 +954,8 @@ submissionRouter.post("/run-console", isAuthenticated, runConsoleLimiter, async 
 // Auto-save code without triggering execution (Student only)
 submissionRouter.post("/autosave", isAuthenticated, async (req, res) => {
   try {
-    const user = await UserModel.findOne({ googleId: req.user.id });
-    if (user.role !== "student") {
+    const user = await resolveCurrentUser(req);
+    if (!user || user.role !== "student") {
       return res.status(403).json({ error: "Student only endpoint" });
     }
 
@@ -1018,8 +1027,8 @@ submissionRouter.post(
   isAuthenticated,
   async (req, res) => {
     try {
-      const user = await UserModel.findOne({ googleId: req.user.id });
-      if (user.role !== "student") {
+      const user = await resolveCurrentUser(req);
+      if (!user || user.role !== "student") {
         return res.status(403).json({ error: "Student only endpoint" });
       }
 
@@ -1096,7 +1105,7 @@ submissionRouter.post(
         return res.status(400).json({ error: "Invalid activity type" });
       }
 
-      const user = await UserModel.findOne({ googleId: req.user.id });
+      const user = await resolveCurrentUser(req);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -1110,7 +1119,7 @@ submissionRouter.post(
           studentId: user._id,
         },
         { $inc: updateField },
-        { new: true },
+        { returnDocument: "after" },
       );
 
       if (!submission) {
@@ -1154,7 +1163,7 @@ submissionRouter.post(
         return res.status(400).json({ error: "Invalid event type" });
       }
 
-      const user = await UserModel.findOne({ googleId: req.user.id });
+      const user = await resolveCurrentUser(req);
       if (!user || user.role !== "student") {
         return res.status(403).json({ error: "Student only endpoint" });
       }

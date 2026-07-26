@@ -169,6 +169,8 @@ export default function ClassroomList() {
                         }
                       }}
                       className="text-destructive hover:text-destructive"
+                      aria-label={`Delete ${classroom.classroomName}`}
+                      title={`Delete ${classroom.classroomName}`}
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>

@@ -16,6 +16,9 @@ const NSJAIL_CONFIG_DIR = process.env.NSJAIL_CONFIG_DIR || path.join(__dirname, 
 const WORKSPACE_DIR = process.env.NSJAIL_WORKSPACE_DIR || path.join(__dirname, "../../temp/nsjail-workspace");
 const JAVA_HOME = process.env.JAVA_HOME || "/usr/lib/jvm/java-11-openjdk";
 const PYTHON_BIN = process.env.PYTHON_BIN || "/usr/bin/python3";
+const NSJAIL_DISABLE_NEWNS = process.env.NSJAIL_DISABLE_NEWNS === "true";
+const JAVAC_BIN = path.join(JAVA_HOME, "bin/javac");
+const JAVA_BIN = path.join(JAVA_HOME, "bin/java");
 
 const COMPILE_TIMEOUT = parseInt(process.env.COMPILE_TIMEOUT) || 10000; // 10s
 const RUN_TIMEOUT = parseInt(process.env.RUN_TIMEOUT) || 5000; // 5s per testcase
@@ -65,8 +68,11 @@ function execNsjail(workspacePath, configFile, cmd, timeoutMs) {
       });
     };
 
-    // nsjail requires -T flag for the mount point path inside jail
-    const child = spawn(NSJAIL_PATH, ["-C", configFile, "-T", workspacePath, "--", ...cmd], {
+    const nsjailArgs = NSJAIL_DISABLE_NEWNS
+      ? ["-Mo", "--disable_clone_newns", "--disable_clone_newnet", "-D", workspacePath, "--", ...cmd]
+      : ["-C", configFile, "-B", `${workspacePath}:/workspace`, "--", ...cmd];
+
+    const child = spawn(NSJAIL_PATH, nsjailArgs, {
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -160,7 +166,7 @@ async function cleanupWorkspace(workspacePath) {
  */
 export async function executeJavaWithNsjail(submission, testCases) {
   // Acquire semaphore slot
-  const release = await semaphore.acquire();
+  await semaphore.acquire();
 
   let workspace = null;
   try {
@@ -197,7 +203,7 @@ export async function executeJavaWithNsjail(submission, testCases) {
     const compileResult = await execNsjail(
       workspace.path,
       javaConfig,
-      ["javac", studentFile],
+      [JAVAC_BIN, studentFile],
       COMPILE_TIMEOUT,
     );
 
@@ -226,7 +232,7 @@ export async function executeJavaWithNsjail(submission, testCases) {
       const graderCompile = await execNsjail(
         workspace.path,
         javaConfig,
-        ["javac", testRunFile],
+        [JAVAC_BIN, testRunFile],
         COMPILE_TIMEOUT,
       );
 
@@ -265,10 +271,11 @@ export async function executeJavaWithNsjail(submission, testCases) {
       await fs.writeFile(inputFile, normalizeContent(tc.input ?? ""), "utf-8");
 
       // Run inside nsjail with input redirection
+      const inputPath = NSJAIL_DISABLE_NEWNS ? `__input_${i}__.txt` : `/workspace/__input_${i}__.txt`;
       const runResult = await execNsjail(
         workspace.path,
         javaConfig,
-        ["sh", "-c", `java ${entryClass} < /workspace/__input_${i}__.txt`],
+        ["/bin/sh", "-c", `${JAVA_BIN} ${entryClass} < ${inputPath}`],
         RUN_TIMEOUT,
       );
 
@@ -327,7 +334,7 @@ export async function executeJavaWithNsjail(submission, testCases) {
     if (workspace) {
       await cleanupWorkspace(workspace.path);
     }
-    release();
+    semaphore.release();
   }
 }
 
@@ -339,7 +346,7 @@ export async function executeJavaWithNsjail(submission, testCases) {
  */
 export async function executePythonWithNsjail(submission, testCases) {
   // Acquire semaphore slot
-  const release = await semaphore.acquire();
+  await semaphore.acquire();
 
   let workspace = null;
   try {
@@ -378,18 +385,16 @@ export async function executePythonWithNsjail(submission, testCases) {
 
       // Write input file
       const inputFile = path.join(workspace.path, `__input_${i}__.txt`);
-      const inputFileName = path.basename(inputFile);
       await fs.writeFile(inputFile, normalizeContent(tc.input ?? ""), "utf-8");
 
-      // Run inside nsjail with input redirection — argv-only, no shell
+      // Run inside nsjail with stdin redirection, matching normal contest input.
+      const inputPath = NSJAIL_DISABLE_NEWNS ? `__input_${i}__.txt` : `/workspace/__input_${i}__.txt`;
       const runResult = await execNsjail(
         workspace.path,
         pythonConfig,
-        [PYTHON_BIN, mainFile, `__input_${i}__.txt`],
+        ["/bin/sh", "-c", `${PYTHON_BIN} ${mainFile} < ${inputPath}`],
         RUN_TIMEOUT,
       );
-      // Re-point input file path: nsjail mounts workspace at /workspace
-      void inputFileName;
 
       const executionTime = Date.now() - startTime;
       const actualOutput = runResult.stdout.replace(/\r/g, "").trimEnd();
@@ -446,7 +451,7 @@ export async function executePythonWithNsjail(submission, testCases) {
     if (workspace) {
       await cleanupWorkspace(workspace.path);
     }
-    release();
+    semaphore.release();
   }
 }
 
@@ -520,7 +525,7 @@ async function executeCompiledLanguage({ submission, testCases, language }) {
   if (!config || !config.compiler) {
     throw new Error(`Compiled executor not configured for ${language}`);
   }
-  const release = await semaphore.acquire();
+  await semaphore.acquire();
   let workspace = null;
   try {
     workspace = await createWorkspace();
@@ -607,7 +612,7 @@ async function executeCompiledLanguage({ submission, testCases, language }) {
     return { results, status, passedCount };
   } finally {
     if (workspace) await cleanupWorkspace(workspace.path);
-    release();
+    semaphore.release();
   }
 }
 
@@ -620,7 +625,7 @@ async function executeInterpretedLanguage({ submission, testCases, language }) {
   if (!config || !config.runtime) {
     throw new Error(`Interpreted executor not configured for ${language}`);
   }
-  const release = await semaphore.acquire();
+  await semaphore.acquire();
   let workspace = null;
   try {
     workspace = await createWorkspace();
@@ -680,7 +685,7 @@ async function executeInterpretedLanguage({ submission, testCases, language }) {
     return { results, status, passedCount };
   } finally {
     if (workspace) await cleanupWorkspace(workspace.path);
-    release();
+    semaphore.release();
   }
 }
 
@@ -702,4 +707,3 @@ export async function executeJavaScriptWithNsjail(submission, testCases) {
 
 // Re-export helpers used by `codeExecutor.js` tests and the production path.
 export { validateFileName };
-

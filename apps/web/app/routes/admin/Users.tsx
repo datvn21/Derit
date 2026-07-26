@@ -219,7 +219,7 @@ export default function AdminUsers() {
 
             {/* Role Filter */}
             <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[140px]" aria-label="Filter by role">
                 <SelectValue placeholder="Role" />
               </SelectTrigger>
               <SelectContent>
@@ -232,7 +232,7 @@ export default function AdminUsers() {
 
             {/* Status Filter */}
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[140px]" aria-label="Filter by status">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -338,6 +338,8 @@ export default function AdminUsers() {
                             size="sm"
                             onClick={() => handleOpenEdit(u)}
                             className="text-muted-foreground hover:text-primary hover:bg-accent"
+                            aria-label={`Edit ${u.name}`}
+                            title={`Edit ${u.name}`}
                           >
                             <Edit2 className="w-4 h-4" />
                           </Button>
@@ -347,6 +349,8 @@ export default function AdminUsers() {
                               size="sm"
                               onClick={() => handleOpenDelete(u)}
                               className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              aria-label={`Delete ${u.name}`}
+                              title={`Delete ${u.name}`}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -431,7 +435,7 @@ export default function AdminUsers() {
                   setCreateForm({ ...createForm, role: v })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Create user role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -491,7 +495,7 @@ export default function AdminUsers() {
                   setEditForm({ ...editForm, role: v })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Edit user role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

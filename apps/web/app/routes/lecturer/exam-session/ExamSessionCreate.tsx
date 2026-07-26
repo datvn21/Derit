@@ -364,6 +364,7 @@ export default function ExamSessionCreate() {
                     size="sm"
                     onClick={generateAccessKey}
                     className="h-9 px-3"
+                    aria-label="Generate random access key"
                     title="Generate random key"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
