@@ -3,13 +3,13 @@ import {
   requireAuth,
   requireRole,
   requirePermission,
-} from "../../src/middleware/policy.js";
-import { KeyedRateLimiter, BoundedCache } from "../../src/services/bounded.js";
+} from "../src/middleware/policy.js";
+import { KeyedRateLimiter, BoundedCache } from "../src/services/bounded.js";
 import {
   buildExecutionFileList,
   normalizeCode,
   normalizeFiles,
-} from "../../src/services/codeExecutor.js";
+} from "../src/services/codeExecutor.js";
 
 const HITS = 200;
 

@@ -1,4 +1,4 @@
-import { Activity, BarChart3, FileText, Settings, Shield, Users } from "lucide-react";
+import { Activity, BarChart3, Settings, Users } from "lucide-react";
 import AuthenticatedShell, { type NavItem } from "~/components/AuthenticatedShell";
 
 const navigation: NavItem[] = [
@@ -11,7 +11,3 @@ const navigation: NavItem[] = [
 export default function AdminLayout() {
   return <AuthenticatedShell navigation={navigation} roleLabel="Admin Panel" />;
 }
-
-// Shield kept for future use; FileText kept as a placeholder for upcoming export routes.
-void Shield;
-void FileText;

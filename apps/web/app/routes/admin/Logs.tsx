@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { useUserStore } from "~/stores/userStore";
-import { authAPI, adminAPI } from "~/lib/api";
+import { useState } from "react";
+import { adminAPI } from "~/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import {
   Select,
@@ -13,6 +11,7 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { PageLoading } from "~/components/ui/page-loading";
 import { Button } from "~/components/ui/button";
+import { useRequireRole } from "~/hooks/useAuth";
 import {
   Activity,
   Clock,
@@ -23,28 +22,11 @@ import {
 } from "lucide-react";
 
 export default function AdminLogs() {
-  const navigate = useNavigate();
-  const { user, setUser } = useUserStore();
+  const user = useRequireRole("admin");
 
   const [page, setPage] = useState(1);
   const [activityFilter, setActivityFilter] = useState("all");
   const [userFilter] = useState("");
-
-  // Auth check
-  useEffect(() => {
-    authAPI
-      .getUser()
-      .then((res) => {
-        if (res.data.role !== "admin" && !res.data.isSuperAdmin) {
-          navigate("/");
-        } else {
-          setUser(res.data);
-        }
-      })
-      .catch(() => {
-        navigate("/");
-      });
-  }, [navigate, setUser]);
 
   // Fetch logs
   const { data: logsData, isLoading } = useQuery({

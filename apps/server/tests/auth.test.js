@@ -2,8 +2,8 @@ import request from "supertest";
 import express from "express";
 import session from "express-session";
 import passport from "passport";
-import authRouter from "../../src/routes/auth.js";
-import { initPassport } from "../../src/config/passport.js";
+import authRouter from "../src/routes/auth.js";
+import { initPassport } from "../src/config/passport.js";
 
 // Create test app
 const createTestApp = () => {

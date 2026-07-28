@@ -67,7 +67,9 @@ export function emptyExamCode(codeNumber: string): ExamCode {
     pdfFile: null,
     questions: [emptyQuestion(1)],
   };
-}export const STARTER_FILE_ACCEPT =
+}
+
+export const STARTER_FILE_ACCEPT =
   ".java,.py,.js,.ts,.c,.cpp,.h,.txt,.inp";
 export const TEST_FILE_ACCEPT = ".java,.py";
 export const EXTRA_FILE_ACCEPT =

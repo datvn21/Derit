@@ -10,7 +10,17 @@ import { useQuery } from "@tanstack/react-query";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { authAPI, examSessionAPI, submissionAPI, BACKEND_URL } from "~/lib/api";
 import { useUserStore } from "~/stores/userStore";
+import { useExamActivityTracking } from "~/hooks/useExamActivityTracking";
+import { useSplitPane } from "~/hooks/useSplitPane";
+import { useCooldownTimer } from "~/hooks/useCooldownTimer";
+import { runSubmission } from "~/services/runSubmission";
 import { toast } from "sonner";
+
+// Cooldowns for different run paths (seconds).
+const CONSOLE_COOLDOWN_SECS = 5;
+const TC_COOLDOWN_SECS = 2;
+const AUTOSAVE_DEBOUNCE_MS = 2000;
+const AUTOSAVE_BACKUP_INTERVAL_MS = 10_000;
 
 interface FileTab {
   name: string;
@@ -124,71 +134,14 @@ export default function Layout() {
   // ── Auto-fullscreen (production only) ────────────────────────────────────
   useEffect(() => {
     if (!import.meta.env.PROD) return;
-    return;
+    const el = document.documentElement;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {});
+    }
   }, []);
 
   // ── Activity Tracking ───────────────────────────────────────────────────
-  useEffect(() => {
-    if (!sessionId || !user) return;
-
-    // Fire-and-forget helper — uses keepalive so it survives rapid interactions
-    const logEvent = (type: string) => {
-      // Standard join/tab_switch go through existing recordActivity endpoint
-      if (type === "join" || type === "tab_switch") {
-        submissionAPI.recordActivity(sessionId, { type: type as "join" | "tab_switch" }).catch(() => {});
-        return;
-      }
-      // Other cheating-indicator events — sent to new client-event endpoint
-      fetch(`${BACKEND_URL}/submissions/record-client-event/${sessionId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        keepalive: true,
-        body: JSON.stringify({ type }),
-      }).catch(() => {});
-    };
-
-    // Record join once on mount
-    logEvent("join");
-
-    // Tab switch (document hidden)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") logEvent("tab_switch");
-    };
-
-    // Copy attempt inside exam window
-    const handleCopy = () => logEvent("copy_attempt");
-
-    // Paste attempt inside exam window
-    const handlePaste = () => logEvent("paste_attempt");
-
-    // Fullscreen exit (production only)
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && import.meta.env.PROD) {
-        logEvent("fullscreen_exit");
-      }
-    };
-
-    // Right-click suppression + tracking
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-      logEvent("right_click");
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    document.addEventListener("copy", handleCopy);
-    document.addEventListener("paste", handlePaste);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener("contextmenu", handleContextMenu);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      document.removeEventListener("copy", handleCopy);
-      document.removeEventListener("paste", handlePaste);
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("contextmenu", handleContextMenu);
-    };
-  }, [sessionId, user]);
+  useExamActivityTracking({ sessionId, enabled: !!sessionId && !!user });
 
   // ── Remote data ─────────────────────────────────────────────────────────
   const {
@@ -227,11 +180,15 @@ export default function Layout() {
   const [runningTestCaseIdx, setRunningTestCaseIdx] = useState<number | null>(
     null,
   ); // E: per-TC spinner
-  const [splitPosition, setSplitPosition] = useState(50);
-  const [isDragging, setIsDragging] = useState(false);
-  const [testCaseHeight, setTestCaseHeight] = useState(256);
-  const [isVerticalDragging, setIsVerticalDragging] = useState(false);
-  const rightPaneRef = useRef<HTMLDivElement>(null);
+
+  // ── Split-pane (horizontal + vertical drag) ─────────────────────────────
+  const {
+    splitPosition,
+    testCaseHeight,
+    startHorizontalDrag,
+    startVerticalDrag,
+    rightPaneRef,
+  } = useSplitPane();
 
   // keep stable ref for polling cleanup
   const pollAbort = useRef<boolean>(false);
@@ -245,45 +202,8 @@ export default function Layout() {
   const [isConsoleRunning, setIsConsoleRunning] = useState(false);
 
   // ── D: Separate cooldowns — console/full-run (5 s) vs per-testcase (2 s) ─────
-  // Shorter testcase cooldown lets students cycle through TCs quickly.
-  const CONSOLE_COOLDOWN_SECS = 5;
-  const TC_COOLDOWN_SECS = 2;
-
-  const [consoleCooldown, setConsoleCooldown] = useState(0);
-  const consoleCooldownRef = useRef<ReturnType<typeof setInterval> | null>(
-    null,
-  );
-  const startConsoleCooldown = useCallback(() => {
-    if (consoleCooldownRef.current) clearInterval(consoleCooldownRef.current);
-    setConsoleCooldown(CONSOLE_COOLDOWN_SECS);
-    consoleCooldownRef.current = setInterval(() => {
-      setConsoleCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(consoleCooldownRef.current!);
-          consoleCooldownRef.current = null;
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, []);
-
-  const [testCaseCooldown, setTestCaseCooldown] = useState(0);
-  const tcCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTestCaseCooldown = useCallback(() => {
-    if (tcCooldownRef.current) clearInterval(tcCooldownRef.current);
-    setTestCaseCooldown(TC_COOLDOWN_SECS);
-    tcCooldownRef.current = setInterval(() => {
-      setTestCaseCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(tcCooldownRef.current!);
-          tcCooldownRef.current = null;
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, []);
+  const consoleCooldown = useCooldownTimer();
+  const testCaseCooldown = useCooldownTimer();
 
   // ── Auto-save infrastructure ────────────────────────────────────────────
   // dirtyQuestionsRef: questions modified since last successful save
@@ -446,55 +366,6 @@ export default function Layout() {
     });
   }, [examData, savedSubmissionData, submissionLoading]);
 
-  // ── Split-pane drag (horizontal) ─────────────────────────────────────────
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-      const p = (e.clientX / window.innerWidth) * 100;
-      setSplitPosition(Math.min(Math.max(p, 25), 75));
-    };
-    const onUp = () => setIsDragging(false);
-
-    if (isDragging) {
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    }
-    return () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isDragging]);
-
-  // ── Vertical drag for test-case panel ────────────────────────────────────
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!isVerticalDragging || !rightPaneRef.current) return;
-      const paneRect = rightPaneRef.current.getBoundingClientRect();
-      const newHeight = paneRect.bottom - e.clientY;
-      setTestCaseHeight(
-        Math.min(Math.max(newHeight, 40), paneRect.height - 130),
-      );
-    };
-    const onUp = () => setIsVerticalDragging(false);
-
-    if (isVerticalDragging) {
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-      document.body.style.cursor = "row-resize";
-      document.body.style.userSelect = "none";
-    }
-    return () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isVerticalDragging]);
-
   // ── Derived values ───────────────────────────────────────────────────────
   const questions: Question[] = examData?.exam?.questions ?? [];
   const currentQuestion = questions[currentQuestionIdx];
@@ -530,19 +401,23 @@ export default function Layout() {
       : [];
 
   // ── Reset status to 'loaded' when switching questions ──────────────────
+  const perQFilesRefForStatus = useRef<Record<number, FileTab[]>>({});
   useEffect(() => {
-    if (currentQN == null || !perQFiles[currentQN]) return;
+    perQFilesRefForStatus.current = perQFiles;
+  });
+  useEffect(() => {
+    if (currentQN == null || !perQFilesRefForStatus.current[currentQN]) return;
     setSaveStatus("loaded");
-  }, [currentQN]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentQN]);
 
   // ── Console run: free run, result shown in editor console panel ─────────────
   const handleRunConsole = useCallback(async () => {
     if (!examData) return;
-    if (consoleCooldown > 0) {
-      toast.warning(`Please wait ${consoleCooldown}s before running again.`);
+    if (consoleCooldown.value > 0) {
+      toast.warning(`Please wait ${consoleCooldown.value}s before running again.`);
       return;
     }
-    startConsoleCooldown();
+    consoleCooldown.start(CONSOLE_COOLDOWN_SECS);
     setIsConsoleRunning(true);
     setConsoleOutput(null);
     try {
@@ -570,62 +445,16 @@ export default function Layout() {
     currentMain,
     examData,
     consoleCooldown,
-    startConsoleCooldown,
   ]);
-
-  // ── B: SSE helper — wait for push result instead of polling ─────────────
-  // Opens an EventSource and resolves when the server emits the grading result.
-  // Falls back gracefully: if SSE fails, caller catches the rejection.
-  const waitForSSE = useCallback(
-    (submissionId: string, qn: number, tc?: number): Promise<any> =>
-      new Promise((resolve, reject) => {
-        const tcParam = tc !== undefined ? `&tc=${tc}` : "";
-        const es = new EventSource(
-          `${BACKEND_URL}/submissions/${submissionId}/events?qn=${qn}${tcParam}`,
-          { withCredentials: true },
-        );
-        const timer = setTimeout(() => {
-          es.close();
-          reject(new Error("SSE timeout"));
-        }, 120_000);
-        const abortTick = setInterval(() => {
-          if (pollAbort.current) {
-            clearTimeout(timer);
-            clearInterval(abortTick);
-            es.close();
-            reject(new Error("aborted"));
-          }
-        }, 300);
-        const cleanup = () => {
-          clearTimeout(timer);
-          clearInterval(abortTick);
-        };
-        es.onmessage = (e) => {
-          cleanup();
-          es.close();
-          try {
-            resolve(JSON.parse(e.data));
-          } catch {
-            reject(new Error("parse"));
-          }
-        };
-        es.onerror = () => {
-          cleanup();
-          es.close();
-          reject(new Error("SSE error"));
-        };
-      }),
-    [],
-  );
 
   // ── Run: submit code then wait via SSE until graded ─────────────────────
   const handleRun = useCallback(async () => {
     if (!sessionId || !currentQuestion || !examData) return;
-    if (consoleCooldown > 0) {
-      toast.warning(`Please wait ${consoleCooldown}s before running again.`);
+    if (consoleCooldown.value > 0) {
+      toast.warning(`Please wait ${consoleCooldown.value}s before running again.`);
       return;
     }
-    startConsoleCooldown();
+    consoleCooldown.start(CONSOLE_COOLDOWN_SECS);
     pollAbort.current = false;
     setIsRunning(true);
     setSaveStatus("compiling");
@@ -635,24 +464,15 @@ export default function Layout() {
     }));
 
     try {
-      const { data } = await submissionAPI.submit({
-        examSessionId: sessionId,
+      const result = await runSubmission({
+        sessionId,
         questionNumber: currentQN,
-        code: currentFiles[0]?.content ?? "",
         language: examData.exam.language,
         files: currentFiles.map((f) => ({ name: f.name, content: f.content })),
         mainFile: currentMain,
+        abortRef: pollAbort,
       });
 
-      const submissionId: string =
-        data.submissionId ?? savedSubmissionData?._id;
-      if (!submissionId) {
-        setIsRunning(false);
-        return;
-      }
-
-      // B: SSE — result pushed the instant grading finishes, no 2 s poll delay
-      const result = await waitForSSE(submissionId, currentQN);
       if (result.status === "compile_error") {
         // Push compile error to editor console
         setConsoleOutput({
@@ -693,21 +513,18 @@ export default function Layout() {
     currentFiles,
     currentMain,
     examData,
-    savedSubmissionData,
     consoleCooldown,
-    startConsoleCooldown,
-    waitForSSE,
   ]);
 
   // ── E+B: Per-testcase run — track index independently, push result via SSE ───
   const handleRunTestCase = useCallback(
     async (testCaseIndex: number) => {
       if (!sessionId || !currentQuestion || !examData) return;
-      if (testCaseCooldown > 0) {
-        toast.warning(`Please wait ${testCaseCooldown}s before running again.`);
+      if (testCaseCooldown.value > 0) {
+        toast.warning(`Please wait ${testCaseCooldown.value}s before running again.`);
         return;
       }
-      startTestCaseCooldown();
+      testCaseCooldown.start(TC_COOLDOWN_SECS);
       pollAbort.current = false;
       setRunningTestCaseIdx(testCaseIndex); // E: only spinner this TC
       setSaveStatus("compiling");
@@ -725,10 +542,9 @@ export default function Layout() {
       }));
 
       try {
-        const { data } = await submissionAPI.submit({
-          examSessionId: sessionId,
+        const result = await runSubmission({
+          sessionId,
           questionNumber: currentQN,
-          code: currentFiles[0]?.content ?? "",
           language: examData.exam.language,
           files: currentFiles.map((f) => ({
             name: f.name,
@@ -736,17 +552,9 @@ export default function Layout() {
           })),
           mainFile: currentMain,
           testCaseIndex,
+          abortRef: pollAbort,
         });
 
-        const submissionId: string =
-          data.submissionId ?? savedSubmissionData?._id;
-        if (!submissionId) {
-          setRunningTestCaseIdx(null);
-          return;
-        }
-
-        // B: SSE — no poll delay
-        const result = await waitForSSE(submissionId, currentQN, testCaseIndex);
         const r = result.testResults?.[testCaseIndex];
         if (r) {
           setPerQResults((prev) => {
@@ -803,10 +611,7 @@ export default function Layout() {
       currentFiles,
       currentMain,
       examData,
-      savedSubmissionData,
       testCaseCooldown,
-      startTestCaseCooldown,
-      waitForSSE,
     ],
   );
 
@@ -861,7 +666,7 @@ export default function Layout() {
         if (saveStatusRef.current !== "compiling") {
           flushQuestions([qn]);
         }
-      }, 2000);
+      }, AUTOSAVE_DEBOUNCE_MS);
     },
     [flushQuestions], // stable: no longer depends on currentQN state
   );
@@ -900,7 +705,7 @@ export default function Layout() {
       if (saveStatusRef.current === "compiling") return;
       const dirty = [...dirtyQuestionsRef.current];
       if (dirty.length > 0) flushQuestions(dirty);
-    }, 10_000);
+    }, AUTOSAVE_BACKUP_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [sessionId, flushQuestions]);
 
@@ -949,16 +754,16 @@ export default function Layout() {
         (examError as any)?.response?.data?.error ??
         (examError as any)?.message ??
         "Không thể tải dữ liệu kỳ thi";
-      alert(`Lỗi: ${msg}`);
+      toast.error(`Lỗi: ${msg}`);
       navigate("/student");
     }
   }, [examError, navigate]);
 
   if (examLoading || submissionLoading || !examData) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center gap-3 bg-gray-50">
-        <div className="w-10 h-10 rounded-full border-4 border-blue-100 border-t-primary animate-spin" />
-        <p className="text-sm text-gray-500 font-medium">Đang tải đề thi…</p>
+      <div className="h-screen flex flex-col items-center justify-center gap-3 bg-background">
+        <div className="w-10 h-10 rounded-full border-4 border-border border-t-primary animate-spin" />
+        <p className="text-sm text-muted-foreground font-medium">Đang tải đề thi…</p>
       </div>
     );
   }
@@ -1008,7 +813,7 @@ export default function Layout() {
         {/* ── Divider ── */}
         <div
           className="w-1 flex items-center justify-center cursor-col-resize group select-none"
-          onMouseDown={() => setIsDragging(true)}
+          onMouseDown={startHorizontalDrag}
         >
           <div className="w-1 h-full rounded-full bg-gray-300 group-hover:bg-blue-400 transition-colors">
             <GripVertical className="w-3 h-3 text-transparent -ml-1 mt-3.5 group-hover:text-blue-400 transition-colors" />
@@ -1048,7 +853,7 @@ export default function Layout() {
                   isConsoleRunning={isConsoleRunning}
                   consoleOutput={consoleOutput}
                   editorStatus={saveStatus}
-                  cooldownRemaining={consoleCooldown}
+                  cooldownRemaining={consoleCooldown.value}
                 />
               </div>
             )}
@@ -1057,7 +862,7 @@ export default function Layout() {
           {/* Vertical resize handle */}
           <div
             className="h-1.5 flex items-center justify-center cursor-row-resize group select-none shrink-0 bg-gray-200 hover:bg-blue-400 transition-colors"
-            onMouseDown={() => setIsVerticalDragging(true)}
+            onMouseDown={startVerticalDrag}
           >
             <div className="w-8 h-0.5 rounded-full bg-gray-400 group-hover:bg-blue-200 transition-colors" />
           </div>

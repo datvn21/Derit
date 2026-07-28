@@ -68,11 +68,9 @@ export default function AuthenticatedShell({
             <span className="font-semibold text-foreground tracking-tight">
               Derit
             </span>
-            {roleLabel !== "Derit" && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                {roleLabel}
-              </span>
-            )}
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              {roleLabel}
+            </span>
           </div>
         </div>
 

@@ -5,8 +5,7 @@
   "description": "Derit monorepo",
   "workspaces": [
     "apps/*",
-    "services/*",
-    "packages/*"
+    "services/*"
   ],
   "scripts": {
     "test:unit": "npm --workspace apps/server run test:unit",

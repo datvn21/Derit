@@ -8,7 +8,10 @@ afterEach(() => {
 });
 
 // Mock environment variables
-vi.stubEnv("VITE_API_URL", "http://localhost:3001");
+// `lib/api.ts` reads `VITE_BACKEND_URL` / `VITE_DEV_BACKEND_URL` (not
+// `VITE_API_URL`), so we stub those here to keep tests in sync with prod.
+vi.stubEnv("VITE_BACKEND_URL", "http://localhost:5001");
+vi.stubEnv("VITE_DEV_BACKEND_URL", "http://localhost:5001");
 
 // Mock fetch API
 global.fetch = vi.fn();

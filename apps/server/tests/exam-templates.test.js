@@ -2,11 +2,11 @@ import request from "supertest";
 import express from "express";
 import session from "express-session";
 import passport from "passport";
-import examTemplateRouter from "../../src/routes/examTemplate.js";
-import { isAuthenticated } from "../../src/middleware/middlewareAuth.js";
-import { initPassport } from "../../src/config/passport.js";
-import ExamTemplateModel from "../../src/models/ExamTemplate.js";
-import UserModel from "../../src/models/User.js";
+import examTemplateRouter from "../src/routes/examTemplate.js";
+import { isAuthenticated } from "../src/middleware/middlewareAuth.js";
+import { initPassport } from "../src/config/passport.js";
+import ExamTemplateModel from "../src/models/ExamTemplate.js";
+import UserModel from "../src/models/User.js";
 import mongoose from "mongoose";
 
 // Mock authenticated user middleware

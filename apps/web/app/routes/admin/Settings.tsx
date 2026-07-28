@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { useUserStore } from "~/stores/userStore";
-import { authAPI, adminAPI } from "~/lib/api";
+import { useState } from "react";
+import { adminAPI } from "~/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { PageLoading } from "~/components/ui/page-loading";
+import { useRequireRole } from "~/hooks/useAuth";
 import { toast } from "sonner";
 import {
   Settings,
@@ -19,27 +18,10 @@ import {
 } from "lucide-react";
 
 export default function AdminSettings() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, setUser } = useUserStore();
+  const user = useRequireRole("admin");
 
   const [formData, setFormData] = useState<any>({});
-
-  // Auth check
-  useEffect(() => {
-    authAPI
-      .getUser()
-      .then((res) => {
-        if (res.data.role !== "admin" && !res.data.isSuperAdmin) {
-          navigate("/");
-        } else {
-          setUser(res.data);
-        }
-      })
-      .catch(() => {
-        navigate("/");
-      });
-  }, [navigate, setUser]);
 
   // Fetch settings
   const { data: settingsData, isLoading } = useQuery({

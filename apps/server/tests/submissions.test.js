@@ -2,13 +2,13 @@ import request from "supertest";
 import express from "express";
 import session from "express-session";
 import passport from "passport";
-import submissionRouter from "../../src/routes/submission.js";
-import { initPassport } from "../../src/config/passport.js";
-import StudentSubmissionModel from "../../src/models/StudentSubmission.js";
-import ExamSessionModel from "../../src/models/ExamSession.js";
-import ExamTemplateModel from "../../src/models/ExamTemplate.js";
-import StudentExamCodeModel from "../../src/models/StudentExamCode.js";
-import UserModel from "../../src/models/User.js";
+import submissionRouter from "../src/routes/submission.js";
+import { initPassport } from "../src/config/passport.js";
+import StudentSubmissionModel from "../src/models/StudentSubmission.js";
+import ExamSessionModel from "../src/models/ExamSession.js";
+import ExamTemplateModel from "../src/models/ExamTemplate.js";
+import StudentExamCodeModel from "../src/models/StudentExamCode.js";
+import UserModel from "../src/models/User.js";
 import mongoose from "mongoose";
 
 const createTestApp = (userId = "student-test-456", role = "student") => {

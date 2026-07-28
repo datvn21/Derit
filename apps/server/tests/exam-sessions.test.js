@@ -2,14 +2,14 @@ import request from "supertest";
 import express from "express";
 import session from "express-session";
 import passport from "passport";
-import examSessionRouter from "../../src/routes/examSession.js";
-import { isAuthenticated } from "../../src/middleware/middlewareAuth.js";
-import { initPassport } from "../../src/config/passport.js";
-import ExamSessionModel from "../../src/models/ExamSession.js";
-import ExamTemplateModel from "../../src/models/ExamTemplate.js";
-import StudentExamCodeModel from "../../src/models/StudentExamCode.js";
-import StudentSubmissionModel from "../../src/models/StudentSubmission.js";
-import UserModel from "../../src/models/User.js";
+import examSessionRouter from "../src/routes/examSession.js";
+import { isAuthenticated } from "../src/middleware/middlewareAuth.js";
+import { initPassport } from "../src/config/passport.js";
+import ExamSessionModel from "../src/models/ExamSession.js";
+import ExamTemplateModel from "../src/models/ExamTemplate.js";
+import StudentExamCodeModel from "../src/models/StudentExamCode.js";
+import StudentSubmissionModel from "../src/models/StudentSubmission.js";
+import UserModel from "../src/models/User.js";
 import mongoose from "mongoose";
 
 const createTestApp = (userId = "test-user-123", role = "lecturer") => {

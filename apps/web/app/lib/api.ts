@@ -72,20 +72,13 @@ export const submissionAPI = {
     autosave: (data: any) => api.post('/submissions/autosave', data),
     runConsole: (data: { files: any[]; mainFile: string; language: string }) =>
         api.post('/submissions/run-console', data),
-    getById: (id: string) => api.get(`/submissions/${id}`),
     getByExam: (sessionId: string) => api.get(`/submissions/exam/${sessionId}`),
-    getByQuestion: (sessionId: string, questionId: string) =>
-        api.get(`/submissions/exam/${sessionId}/question/${questionId}`),
-    getLatest: (sessionId: string, questionId: string) =>
-        api.get(`/submissions/exam/${sessionId}/question/${questionId}/latest`),
     submitExam: (sessionId: string) => api.post(`/submissions/submit-exam/${sessionId}`),
     recordActivity: (sessionId: string, data: { type: 'join' | 'tab_switch' }) =>
         api.post(`/submissions/record-activity/${sessionId}`, data),
 
     // Lecturer
     getAllForSession: (sessionId: string) => api.get(`/submissions/session/${sessionId}/all`),
-    getStudentSubmissions: (sessionId: string, studentId: string) =>
-        api.get(`/submissions/session/${sessionId}/student/${studentId}`),
     regradeAll: (sessionId: string, submittedOnly = true) => api.post(`/submissions/session/${sessionId}/regrade-all`, { submittedOnly }),
     regradeProgressUrl: (sessionId: string) =>
         `${BACKEND_URL}/submissions/session/${sessionId}/regrade-progress`,

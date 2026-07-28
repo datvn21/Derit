@@ -1,31 +1,13 @@
-import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router";
-import { useUserStore } from "~/stores/userStore";
-import { authAPI, adminAPI } from "~/lib/api";
+import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Users, UserCheck, Activity, Clock } from "lucide-react";
 import { PageLoading } from "~/components/ui/page-loading";
 import { StatCard } from "~/components/ui/stat-card";
+import { useRequireRole } from "~/hooks/useAuth";
+import { adminAPI } from "~/lib/api";
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
-  const { user, setUser } = useUserStore();
-
-  // Auth check
-  useEffect(() => {
-    authAPI
-      .getUser()
-      .then((res) => {
-        if (res.data.role !== "admin" && !res.data.isSuperAdmin) {
-          navigate("/");
-        } else {
-          setUser(res.data);
-        }
-      })
-      .catch(() => {
-        navigate("/");
-      });
-  }, [navigate, setUser]);
+  const user = useRequireRole("admin");
 
   // Fetch stats
   const { data: statsData } = useQuery({

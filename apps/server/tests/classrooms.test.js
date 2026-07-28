@@ -2,10 +2,10 @@ import request from "supertest";
 import express from "express";
 import session from "express-session";
 import passport from "passport";
-import classroomRouter from "../../src/routes/classroom.js";
-import { initPassport } from "../../src/config/passport.js";
-import ClassroomModel from "../../src/models/Classroom.js";
-import UserModel from "../../src/models/User.js";
+import classroomRouter from "../src/routes/classroom.js";
+import { initPassport } from "../src/config/passport.js";
+import ClassroomModel from "../src/models/Classroom.js";
+import UserModel from "../src/models/User.js";
 import mongoose from "mongoose";
 
 const createTestApp = (userId = "lecturer-test-123", role = "lecturer") => {

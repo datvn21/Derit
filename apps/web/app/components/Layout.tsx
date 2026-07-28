@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, FileText, Gauge, Layers, Users } from "lucide-react";
+import { Calendar, Gauge, Layers, Users } from "lucide-react";
 import AuthenticatedShell, { type NavItem } from "~/components/AuthenticatedShell";
 
 const navigation: NavItem[] = [
@@ -11,7 +11,3 @@ const navigation: NavItem[] = [
 export default function Layout() {
   return <AuthenticatedShell navigation={navigation} roleLabel="Lecturer" />;
 }
-
-// Silence unused-import lints for icons kept for future expansion.
-void BookOpen;
-void FileText;

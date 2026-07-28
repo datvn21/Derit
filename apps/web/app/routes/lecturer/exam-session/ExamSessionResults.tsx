@@ -31,75 +31,13 @@ import {
 import { cn } from "~/lib/utils";
 import { toast } from "sonner";
 import Editor from "@monaco-editor/react";
+import { buildRow, scoreChipClass } from "./Results/scoring";
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// Re-exported so other modules (and existing imports) keep working.
+export { passedTests, totalTests } from "./Results/scoring";
+export type { ResultsRow } from "./Results/scoring";
 
-function passedTests(sub: any) {
-  return (sub.testResults || []).filter((r: any) => r.status === "passed")
-    .length;
-}
-function totalTests(sub: any) {
-  return (sub.testResults || []).length;
-}
-
-/** Compute per-student row data from raw StudentSubmission */
-function buildRow(submission: any, maxQuestions: number) {
-  const questions: { passed: number; total: number; status: string }[] =
-    Array.from({ length: maxQuestions }, () => ({
-      passed: 0,
-      total: 0,
-      status: "—",
-    }));
-
-  let totalPassed = 0;
-  let totalTestCount = 0;
-
-  for (const q of submission.submissions || []) {
-    const idx = q.questionNumber - 1;
-    if (idx >= 0 && idx < maxQuestions) {
-      const p = passedTests(q);
-      const t = totalTests(q);
-      questions[idx] = { passed: p, total: t, status: q.status };
-      totalPassed += p;
-      totalTestCount += t;
-    }
-  }
-
-  return {
-    id: submission._id,
-    student: submission.studentId,
-    examCode: submission.examCodeNumber,
-    isSubmitted: submission.isSubmitted,
-    tabSwitches: submission.tabSwitchCount || 0,
-    joinCount: submission.joinCount || 0,
-    questions,
-    totalPassed,
-    totalTests: totalTestCount,
-    pct:
-      totalTestCount > 0 ? Math.round((totalPassed / totalTestCount) * 100) : 0,
-    score10:
-      submission.finalScore ??
-      (totalTestCount > 0
-        ? Math.round((totalPassed / totalTestCount) * 10 * 10) / 10
-        : 0),
-  };
-}
-
-// ── Score chip ────────────────────────────────────────────────────────────────
-
-function scoreChipClass(passed: number, total: number, status: string): string {
-  if (status === "compile_error")
-    return "bg-destructive/10 text-destructive border-destructive/30";
-  if (status === "runtime_error" || status === "time_limit_exceeded")
-    return "bg-warning/15 text-warning border-warning/30";
-  if (status === "partial")
-    return "bg-warning/15 text-warning border-warning/30";
-  if (total === 0) return "bg-muted text-muted-foreground border-border";
-  const pct = Math.round((passed / total) * 100);
-  if (pct >= 80) return "bg-success/10 text-success border-success/30";
-  if (pct >= 40) return "bg-warning/15 text-warning border-warning/30";
-  return "bg-destructive/10 text-destructive border-destructive/30";
-}
+import { useRegradeProgress } from "./Results/useRegradeProgress";
 
 function ScoreChip({
   passed,

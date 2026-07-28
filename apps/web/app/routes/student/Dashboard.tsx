@@ -13,7 +13,7 @@
  * Status differentiation is carried by the `Badge` primitive, not by
  * per-row tint (see audit M1).
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useUserStore } from "~/stores/userStore";
 import { authAPI, examSessionAPI } from "~/lib/api";
@@ -66,7 +66,7 @@ function statusBadgeFor(exam: any) {
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const user = useRequireRole("student");
-  const { setUser, logout } = useUserStore();
+  const { logout } = useUserStore();
   const [selectedExam, setSelectedExam] = useState<any>(null);
   const [computerOrder, setComputerOrder] = useState("");
   const [accessKey, setAccessKey] = useState("");
@@ -77,12 +77,6 @@ export default function StudentDashboard() {
   const [roomCode, setRoomCode] = useState("");
   const [searchError, setSearchError] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-
-  useEffect(() => {
-    if (user && !user.avatar) {
-      void setUser;
-    }
-  }, [user, setUser]);
 
   // Fetch available exams
   const {

@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
-import { useUserStore } from "~/stores/userStore";
-import { authAPI, adminAPI } from "~/lib/api";
+import { useState } from "react";
+import { useSearchParams } from "react-router";
+import { adminAPI } from "~/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -22,6 +21,7 @@ import {
 } from "~/components/ui/select";
 import { Badge } from "~/components/ui/badge";
 import { PageLoading } from "~/components/ui/page-loading";
+import { useRequireRole } from "~/hooks/useAuth";
 import {
   Users,
   Search,
@@ -39,10 +39,9 @@ import {
 import { toast } from "sonner";
 
 export default function AdminUsers() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { user, setUser } = useUserStore();
+  const user = useRequireRole("admin");
 
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [roleFilter, setRoleFilter] = useState(searchParams.get("role") || "all");
@@ -66,22 +65,6 @@ export default function AdminUsers() {
     isActive: true,
     isSuperAdmin: false,
   });
-
-  // Auth check
-  useEffect(() => {
-    authAPI
-      .getUser()
-      .then((res) => {
-        if (res.data.role !== "admin" && !res.data.isSuperAdmin) {
-          navigate("/");
-        } else {
-          setUser(res.data);
-        }
-      })
-      .catch(() => {
-        navigate("/");
-      });
-  }, [navigate, setUser]);
 
   // Fetch users
   const { data: usersData, isLoading, refetch } = useQuery({

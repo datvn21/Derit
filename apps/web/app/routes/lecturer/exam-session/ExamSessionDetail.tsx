@@ -20,24 +20,7 @@ import {
   BarChart2,
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Helper: Format UTC date to local datetime-local format (YYYY-MM-DDTHH:mm)
-const formatToLocalDateTime = (utcDate: string | Date): string => {
-  const date = new Date(utcDate);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
-const statusVariantMap: Record<string, "info" | "success" | "destructive" | "warning" | "default"> = {
-  scheduled: "info",
-  ongoing: "warning",
-  ended: "destructive",
-  graded: "success",
-};
+import { formatToLocalDateTime, stripUniversityDomain, STATUS_VARIANT_MAP, withUniversityDomain } from "./Detail/helpers";
 
 export default function ExamSessionDetail() {
   const { id } = useParams();
@@ -74,20 +57,12 @@ export default function ExamSessionDetail() {
     if (sessionData?.data?.session) {
       const session = sessionData.data.session;
 
-      // Strip @student.tdtu.edu.vn from emails for display
-      const stripDomain = (emails: string[]) =>
-        emails.map((e) =>
-          e.endsWith("@student.tdtu.edu.vn")
-            ? e.replace("@student.tdtu.edu.vn", "")
-            : e,
-        );
-
       setSessionName(session.sessionName);
       setStartTime(formatToLocalDateTime(session.startTime));
       setEndTime(formatToLocalDateTime(session.endTime));
       setAccessKey(session.accessKey || "");
-      setWhitelist(stripDomain(session.whitelist || []).join("\n"));
-      setBlacklist(stripDomain(session.blacklist || []).join("\n"));
+      setWhitelist(stripUniversityDomain(session.whitelist || []).join("\n"));
+      setBlacklist(stripUniversityDomain(session.blacklist || []).join("\n"));
     }
   }, [sessionData]);
 
@@ -233,7 +208,7 @@ export default function ExamSessionDetail() {
         .split("\n")
         .map((e) => e.trim())
         .filter((e) => e)
-        .map((e) => (e.includes("@") ? e : `${e}@student.tdtu.edu.vn`));
+        .map(withUniversityDomain);
 
     updateMutation.mutate({
       sessionName,
@@ -680,7 +655,7 @@ export default function ExamSessionDetail() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Status</span>
                   <Badge
-                    variant={statusVariantMap[session.status] ?? "default"}
+                    variant={STATUS_VARIANT_MAP[session.status] ?? "default"}
                     className="capitalize"
                   >
                     {session.status}
