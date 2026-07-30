@@ -878,6 +878,8 @@ export default function Layout() {
               runningTestCaseIdx={runningTestCaseIdx}
               questionNumber={currentQuestion?.questionNumber}
               onRunTestCase={handleRunTestCase}
+              onRunAll={handleRun}
+              isRunAllDisabled={consoleCooldown.value > 0}
             />
           </div>
         </div>

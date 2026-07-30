@@ -12,13 +12,21 @@ const __dirname = path.dirname(__filename);
 // Alpine: /usr/lib/jvm/java-11-openjdk, /usr/bin/python3
 // Ubuntu: /usr/lib/jvm/java-11-openjdk-amd64, /usr/bin/python3
 const NSJAIL_PATH = process.env.NSJAIL_PATH || "/usr/bin/nsjail";
-const NSJAIL_CONFIG_DIR = process.env.NSJAIL_CONFIG_DIR || path.join(__dirname, "../../config");
-const WORKSPACE_DIR = process.env.NSJAIL_WORKSPACE_DIR || path.join(__dirname, "../../temp/nsjail-workspace");
+const NSJAIL_CONFIG_DIR =
+  process.env.NSJAIL_CONFIG_DIR || path.join(__dirname, "../../config");
+const WORKSPACE_DIR =
+  process.env.NSJAIL_WORKSPACE_DIR ||
+  path.join(__dirname, "../../temp/nsjail-workspace");
 const JAVA_HOME = process.env.JAVA_HOME || "/usr/lib/jvm/java-11-openjdk";
 const PYTHON_BIN = process.env.PYTHON_BIN || "/usr/bin/python3";
 const NSJAIL_DISABLE_NEWNS = process.env.NSJAIL_DISABLE_NEWNS === "true";
 const JAVAC_BIN = path.join(JAVA_HOME, "bin/javac");
 const JAVA_BIN = path.join(JAVA_HOME, "bin/java");
+// JVM memory/perf flags applied to both javac and java. Passed via argv
+// (not _JAVA_OPTIONS env) so the JVM doesn't print
+// "Picked up _JAVA_OPTIONS: ..." to stderr and pollute user output.
+const JVM_RUNTIME_FLAGS = ["-J-Xmx128m", "-J-Xms16m", "-J-XX:-UsePerfData"];
+const JAVA_RUNTIME_FLAGS = ["-Xmx128m", "-Xms16m", "-XX:-UsePerfData"];
 
 const COMPILE_TIMEOUT = parseInt(process.env.COMPILE_TIMEOUT) || 10000; // 10s
 const RUN_TIMEOUT = parseInt(process.env.RUN_TIMEOUT) || 5000; // 5s per testcase
@@ -69,8 +77,16 @@ function execNsjail(workspacePath, configFile, cmd, timeoutMs) {
     };
 
     const nsjailArgs = NSJAIL_DISABLE_NEWNS
-      ? ["-Mo", "--disable_clone_newns", "--disable_clone_newnet", "-D", workspacePath, "--", ...cmd]
-      : ["-C", configFile, "-B", `${workspacePath}:/workspace`, "--", ...cmd];
+      ? [
+          "-Mo",
+          "--disable_clone_newns",
+          "--disable_clone_newnet",
+          "-D",
+          workspacePath,
+          "--",
+          ...cmd,
+        ]
+      : ["-C", configFile, "-D", workspacePath, "--", ...cmd];
 
     const child = spawn(NSJAIL_PATH, nsjailArgs, {
       stdio: ["ignore", "pipe", "pipe"],
@@ -203,14 +219,16 @@ export async function executeJavaWithNsjail(submission, testCases) {
     const compileResult = await execNsjail(
       workspace.path,
       javaConfig,
-      [JAVAC_BIN, studentFile],
+      [JAVAC_BIN, ...JVM_RUNTIME_FLAGS, studentFile],
       COMPILE_TIMEOUT,
     );
 
     if (compileResult.timedOut || compileResult.exitCode !== 0) {
       const errorMsg = compileResult.timedOut
         ? "Compilation timeout (exceeded 10s)"
-        : compileResult.stderr || compileResult.stdout || "Unknown compile error";
+        : compileResult.stderr ||
+          compileResult.stdout ||
+          "Unknown compile error";
 
       return {
         results: [
@@ -232,14 +250,16 @@ export async function executeJavaWithNsjail(submission, testCases) {
       const graderCompile = await execNsjail(
         workspace.path,
         javaConfig,
-        [JAVAC_BIN, testRunFile],
+        [JAVAC_BIN, ...JVM_RUNTIME_FLAGS, testRunFile],
         COMPILE_TIMEOUT,
       );
 
       if (graderCompile.timedOut || graderCompile.exitCode !== 0) {
         const errorMsg = graderCompile.timedOut
           ? "Grader compilation timeout (exceeded 10s)"
-          : graderCompile.stderr || graderCompile.stdout || "Unknown compile error";
+          : graderCompile.stderr ||
+            graderCompile.stdout ||
+            "Unknown compile error";
 
         return {
           results: [
@@ -270,19 +290,24 @@ export async function executeJavaWithNsjail(submission, testCases) {
       const inputFile = path.join(workspace.path, `__input_${i}__.txt`);
       await fs.writeFile(inputFile, normalizeContent(tc.input ?? ""), "utf-8");
 
-      // Run inside nsjail with input redirection
-      const inputPath = NSJAIL_DISABLE_NEWNS ? `__input_${i}__.txt` : `/workspace/__input_${i}__.txt`;
+      // Run inside nsjail with input redirection (cwd is already workspace)
+      const inputPath = `__input_${i}__.txt`;
       const runResult = await execNsjail(
         workspace.path,
         javaConfig,
-        ["/bin/sh", "-c", `${JAVA_BIN} ${entryClass} < ${inputPath}`],
+        ["/bin/sh", "-c", `${JAVA_BIN} ${JAVA_RUNTIME_FLAGS.join(" ")} ${entryClass} < ${inputPath}`],
         RUN_TIMEOUT,
       );
 
       const executionTime = Date.now() - startTime;
       const actualOutput = runResult.stdout.replace(/\r/g, "").trimEnd();
-      const expectedOutput = (tc.expectedOutput ?? "").replace(/\r/g, "").trimEnd();
-      const passed = !runResult.timedOut && runResult.exitCode === 0 && actualOutput === expectedOutput;
+      const expectedOutput = (tc.expectedOutput ?? "")
+        .replace(/\r/g, "")
+        .trimEnd();
+      const passed =
+        !runResult.timedOut &&
+        runResult.exitCode === 0 &&
+        actualOutput === expectedOutput;
 
       if (passed) passedCount++;
 
@@ -290,7 +315,8 @@ export async function executeJavaWithNsjail(submission, testCases) {
       if (runResult.timedOut) {
         errorMsg = `Time limit exceeded (timeout after ${RUN_TIMEOUT / 1000}s)`;
       } else if (runResult.exitCode !== 0) {
-        errorMsg = runResult.stderr || `Process exited with code ${runResult.exitCode}`;
+        errorMsg =
+          runResult.stderr || `Process exited with code ${runResult.exitCode}`;
       }
 
       results.push({
@@ -388,7 +414,7 @@ export async function executePythonWithNsjail(submission, testCases) {
       await fs.writeFile(inputFile, normalizeContent(tc.input ?? ""), "utf-8");
 
       // Run inside nsjail with stdin redirection, matching normal contest input.
-      const inputPath = NSJAIL_DISABLE_NEWNS ? `__input_${i}__.txt` : `/workspace/__input_${i}__.txt`;
+      const inputPath = `__input_${i}__.txt`;
       const runResult = await execNsjail(
         workspace.path,
         pythonConfig,
@@ -398,8 +424,13 @@ export async function executePythonWithNsjail(submission, testCases) {
 
       const executionTime = Date.now() - startTime;
       const actualOutput = runResult.stdout.replace(/\r/g, "").trimEnd();
-      const expectedOutput = (tc.expectedOutput ?? "").replace(/\r/g, "").trimEnd();
-      const passed = !runResult.timedOut && runResult.exitCode === 0 && actualOutput === expectedOutput;
+      const expectedOutput = (tc.expectedOutput ?? "")
+        .replace(/\r/g, "")
+        .trimEnd();
+      const passed =
+        !runResult.timedOut &&
+        runResult.exitCode === 0 &&
+        actualOutput === expectedOutput;
 
       if (passed) passedCount++;
 
@@ -407,7 +438,8 @@ export async function executePythonWithNsjail(submission, testCases) {
       if (runResult.timedOut) {
         errorMsg = `Time limit exceeded (timeout after ${RUN_TIMEOUT / 1000}s)`;
       } else if (runResult.exitCode !== 0) {
-        errorMsg = runResult.stderr || `Process exited with code ${runResult.exitCode}`;
+        errorMsg =
+          runResult.stderr || `Process exited with code ${runResult.exitCode}`;
       }
 
       results.push({
@@ -498,13 +530,17 @@ function buildRunResult({ runResult, startTime, expected, passOnAnyNonZero }) {
   const executionTime = Date.now() - startTime;
   const actualOutput = (runResult.stdout ?? "").replace(/\r/g, "").trimEnd();
   const expectedOutput = (expected ?? "").replace(/\r/g, "").trimEnd();
-  const passed = !runResult.timedOut &&
-    (passOnAnyNonZero ? runResult.exitCode === 0 : actualOutput === expectedOutput);
+  const passed =
+    !runResult.timedOut &&
+    (passOnAnyNonZero
+      ? runResult.exitCode === 0
+      : actualOutput === expectedOutput);
   let errorMsg = "";
   if (runResult.timedOut) {
     errorMsg = `Time limit exceeded (timeout after ${runResult.timeoutMs / 1000}s)`;
   } else if (runResult.exitCode !== 0) {
-    errorMsg = runResult.stderr || `Process exited with code ${runResult.exitCode}`;
+    errorMsg =
+      runResult.stderr || `Process exited with code ${runResult.exitCode}`;
   }
   return {
     executionTime,
@@ -555,7 +591,9 @@ async function executeCompiledLanguage({ submission, testCases, language }) {
     if (compileResult.timedOut || compileResult.exitCode !== 0) {
       const errorMsg = compileResult.timedOut
         ? "Compilation timeout"
-        : compileResult.stderr || compileResult.stdout || "Unknown compile error";
+        : compileResult.stderr ||
+          compileResult.stdout ||
+          "Unknown compile error";
       return {
         results: [
           {
@@ -603,7 +641,8 @@ async function executeCompiledLanguage({ submission, testCases, language }) {
     }
 
     const status = (() => {
-      if (results.some((r) => r.error?.includes("Time limit exceeded"))) return "time_limit_exceeded";
+      if (results.some((r) => r.error?.includes("Time limit exceeded")))
+        return "time_limit_exceeded";
       if (results.some((r) => r.error?.length > 0)) return "runtime_error";
       if (passedCount === testCases.length) return "accepted";
       return "wrong_answer";
@@ -676,7 +715,8 @@ async function executeInterpretedLanguage({ submission, testCases, language }) {
     }
 
     const status = (() => {
-      if (results.some((r) => r.error?.includes("Time limit exceeded"))) return "time_limit_exceeded";
+      if (results.some((r) => r.error?.includes("Time limit exceeded")))
+        return "time_limit_exceeded";
       if (results.some((r) => r.error?.length > 0)) return "runtime_error";
       if (passedCount === testCases.length) return "accepted";
       return "wrong_answer";
@@ -702,7 +742,11 @@ export async function executeCppWithNsjail(submission, testCases) {
  * `node main.js` path that ran outside the sandbox.
  */
 export async function executeJavaScriptWithNsjail(submission, testCases) {
-  return executeInterpretedLanguage({ submission, testCases, language: "javascript" });
+  return executeInterpretedLanguage({
+    submission,
+    testCases,
+    language: "javascript",
+  });
 }
 
 // Re-export helpers used by `codeExecutor.js` tests and the production path.

@@ -23,7 +23,7 @@ services:
       - MONGODB_CONNECTIONSTRING=mongodb://mongodb:27017/derit
       - NSJAIL_PATH=/usr/bin/nsjail
       - NSJAIL_CONFIG_DIR=/app/config
-      - NSJAIL_WORKSPACE_DIR=/workspace
+      - NSJAIL_WORKSPACE_DIR=/tmp/nsjail-workspace
       - JAVA_HOME=/usr/lib/jvm/java-11-openjdk
       - PYTHON_BIN=/usr/bin/python3
       - NSJAIL_MAX_CONCURRENT=4
@@ -35,7 +35,6 @@ services:
     volumes:
       - ./apps/server:/app
       - /app/node_modules
-      - nsjail-workspace:/workspace
     depends_on:
       mongodb:
         condition: service_healthy
@@ -66,7 +65,6 @@ services:
 
 volumes:
   mongodb_dev_data:
-  nsjail-workspace:
 
 networks:
   derit-network:

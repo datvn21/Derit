@@ -3,10 +3,13 @@ services:
     restart: unless-stopped
     volumes:
       - mongodb_prod_data:/data/db
+    mem_limit: 768m
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 768M
+        reservations:
+          memory: 384M
 
   server:
     build:
@@ -18,9 +21,22 @@ services:
     environment:
       - NODE_ENV=production
       - MONGODB_URI=mongodb://mongodb:27017/derit
+      - NSJAIL_MAX_CONCURRENT=5
+      - NSJAIL_MEMORY_LIMIT_MB=256
+      - RUN_TIMEOUT=3000
+      - COMPILE_TIMEOUT=15000
     env_file:
       - ./apps/server/.env
     restart: unless-stopped
+    mem_limit: 2g
+    deploy:
+      resources:
+        limits:
+          cpus: '3'
+          memory: 2G
+        reservations:
+          cpus: '1.5'
+          memory: 1.25G
     depends_on:
       mongodb:
         condition: service_healthy
@@ -41,6 +57,13 @@ services:
     environment:
       - VITE_API_URL=http://server:3000
     restart: unless-stopped
+    mem_limit: 384m
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 192M
     depends_on:
       - server
 

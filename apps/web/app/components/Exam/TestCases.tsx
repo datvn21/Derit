@@ -6,7 +6,12 @@ import {
   EyeOff,
   Loader2,
   Play,
+  ChevronRight,
+  Timer,
 } from "lucide-react";
+import { useState } from "react";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
 
 export interface TestCase {
   id: number;
@@ -22,42 +27,45 @@ export interface TestCase {
 
 interface TestCasesProps {
   testCases: TestCase[];
-  isRunning?: boolean;            // full-run (all TCs) — disables every button
-  runningTestCaseIdx?: number | null; // E: per-TC run — only that button spins
+  isRunning?: boolean;
+  runningTestCaseIdx?: number | null;
   questionNumber?: number;
   onRunTestCase?: (testCaseIdx: number) => void;
+  /** Fires the "run all" action — if provided, a Run-all button appears in the header. */
+  onRunAll?: () => void;
+  /** Disable the Run-all button (e.g. during cooldown). */
+  isRunAllDisabled?: boolean;
 }
 
 const STATUS_CONFIG = {
   passed: {
     icon: CheckCircle2,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50 border-emerald-200",
-    badge: "bg-emerald-100 text-emerald-700",
+    badgeVariant: "success" as const,
     label: "Passed",
   },
   failed: {
     icon: XCircle,
-    color: "text-red-500",
-    bg: "bg-red-50 border-red-200",
-    badge: "bg-red-100 text-red-600",
+    badgeVariant: "destructive" as const,
     label: "Failed",
   },
   error: {
     icon: AlertCircle,
-    color: "text-gray-500",
-    bg: "bg-gray-50 border-gray-200",
-    badge: "bg-gray-100 text-gray-700",
+    badgeVariant: "destructive" as const,
     label: "Error",
   },
   pending: {
     icon: Clock,
-    color: "text-gray-400",
-    bg: "bg-gray-50 border-gray-200",
-    badge: "bg-gray-100 text-gray-500",
+    badgeVariant: "default" as const,
     label: "Pending",
   },
 };
+
+function formatMs(ms?: number) {
+  if (ms == null) return null;
+  if (ms < 1) return "<1 ms";
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  return `${(ms / 1000).toFixed(2)} s`;
+}
 
 export default function TestCases({
   testCases,
@@ -65,12 +73,19 @@ export default function TestCases({
   runningTestCaseIdx = null,
   questionNumber,
   onRunTestCase,
+  onRunAll,
+  isRunAllDisabled = false,
 }: TestCasesProps) {
   const visibleTestCases = testCases.filter((tc) => !tc.isHidden);
   const hiddenCount = testCases.filter((tc) => tc.isHidden).length;
+
   const passedCount = visibleTestCases.filter(
     (tc) => tc.status === "passed",
   ).length;
+  const failedCount = visibleTestCases.filter(
+    (tc) => tc.status === "failed" || tc.status === "error",
+  ).length;
+  const pendingCount = visibleTestCases.length - passedCount - failedCount;
   const totalCount = visibleTestCases.length;
   const hasResults = visibleTestCases.some(
     (tc) => tc.status && tc.status !== "pending",
@@ -79,143 +94,347 @@ export default function TestCases({
   const questionLabel =
     questionNumber != null ? `Question ${questionNumber}` : null;
 
+  // Default: open the row that is currently running, fail/error rows, or first row.
+  const initiallyOpen = new Set<number>(
+    visibleTestCases
+      .map((tc, i) =>
+        tc.status === "failed" ||
+        tc.status === "error" ||
+        runningTestCaseIdx === i
+          ? i
+          : null,
+      )
+      .filter((v): v is number => v !== null),
+  );
+  if (initiallyOpen.size === 0 && visibleTestCases.length > 0) {
+    initiallyOpen.add(0);
+  }
+  const [openIndices, setOpenIndices] = useState<Set<number>>(initiallyOpen);
+
+  const toggle = (i: number) => {
+    setOpenIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  };
+
   return (
-    <div className="flex flex-col h-full bg-white border border-gray-200  overflow-hidden shadow-sm">
+    <div className="flex flex-col h-full bg-card border border-border overflow-hidden shadow-sm">
       {/* ── Panel header ── */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-gray-800">
+      <div className="flex items-center justify-between gap-3 h-10 px-4 bg-muted border-b border-border shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm font-semibold text-foreground tracking-tight truncate">
             Test Cases
           </span>
           {questionLabel && (
-            <span className="text-sm px-2 py-0.5 rounded bg-blue-100 text-primary font-medium">
-              {questionLabel}
-            </span>
+            <Badge variant="info">{questionLabel}</Badge>
           )}
         </div>
 
-        {!isRunning && hasResults && totalCount > 0 && (
-          <span
-            className={`text-xs font-semibold px-2 py-1 rounded tracking-wide`}
+        {hasResults && totalCount > 0 && (
+          <div
+            aria-label="Test result summary"
+            className="flex items-center gap-3 min-w-0"
           >
-            Passed {passedCount}/{totalCount}
-          </span>
+            <SummaryStat label="Passed" value={passedCount} variant="success" />
+            <span className="text-border" aria-hidden>·</span>
+            <SummaryStat
+              label="Failed"
+              value={failedCount}
+              variant="destructive"
+            />
+            <span className="text-border" aria-hidden>·</span>
+            <SummaryStat label="Pending" value={pendingCount} variant="default" />
+          </div>
         )}
+
+        <div className="flex items-center gap-2 shrink-0">
+          {onRunAll && (
+            <Button
+              type="button"
+              onClick={onRunAll}
+              disabled={isRunning || isRunAllDisabled}
+              size="sm"
+              aria-label="Run all test cases"
+              title="Run all test cases"
+              className="h-7 px-2.5 gap-1"
+            >
+              {isRunning && runningTestCaseIdx == null ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Play className="w-3 h-3 fill-current" />
+              )}
+              Run all
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* ── Body ── */}
       <div className="flex-1 overflow-y-auto">
-        {isRunning ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-sm">
-              Running test {questionLabel ? `for ${questionLabel}` : ""}…
-            </p>
-          </div>
+        {isRunning && runningTestCaseIdx == null ? (
+          <EmptyState
+            icon={<Loader2 className="w-8 h-8 animate-spin text-primary" />}
+            title="Running tests…"
+            subtitle={questionLabel ? `for ${questionLabel}` : undefined}
+          />
         ) : testCases.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-gray-400">
-            <AlertCircle className="w-10 h-10" />
-            <p className="text-sm">No test case</p>
-          </div>
+          <EmptyState
+            icon={<AlertCircle className="w-10 h-10" />}
+            title="No test case"
+          />
+        ) : visibleTestCases.length === 0 ? (
+          <EmptyState
+            icon={<EyeOff className="w-10 h-10" />}
+            title="All test cases are hidden"
+            subtitle="Only the grader can see hidden inputs"
+          />
         ) : (
-          <div className="p-3 grid grid-cols-2 gap-2">
+          <ul role="list" className="divide-y divide-border">
             {visibleTestCases.map((tc, index) => {
               const cfg = STATUS_CONFIG[tc.status ?? "pending"];
               const Icon = cfg.icon;
-              return (
-                <div
-                  key={tc.id}
-                  className={`rounded-lg border p-3 text-xs ${
-                    tc.status && tc.status !== "pending"
-                      ? cfg.bg
-                      : "bg-white border-gray-200 hover:border-gray-300"
-                  } transition-colors`}
-                >
-                  {/* Card header */}
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-gray-700">
-                      {questionLabel
-                        ? `${questionLabel} - Test ${index + 1}`
-                        : `Test Case ${index + 1}`}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      {tc.status && tc.status !== "pending" && (
-                        <span
-                          className={`flex items-center gap-1 font-medium ${cfg.badge} px-1.5 py-0.5 rounded-full`}
-                        >
-                          <Icon className="w-3 h-3" />
-                          {cfg.label}
-                        </span>
-                      )}
-                      {tc.hasTestFile && onRunTestCase && (
-                        (() => {
-                          const tcIdx = tc.id - 1;
-                          const isThisRunning = runningTestCaseIdx === tcIdx;
-                          const disabled = isRunning || isThisRunning;
-                          return (
-                            <button
-                              onClick={() => !disabled && onRunTestCase(tcIdx)}
-                              disabled={disabled}
-                              title="Chạy test case này"
-                              className="flex items-center gap-0.5 px-1.5 py-1.5 rounded bg-primary hover:bg-primary/80 text-white disabled:opacity-50 cursor-pointer"
-                            >
-                              {isThisRunning ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Play className="w-3 h-3 fill-white" />
-                              )}
-                            </button>
-                          );
-                        })()
-                      )}
-                    </div>
-                  </div>
+              const isOpen = openIndices.has(index);
+              const tcIdx = tc.id - 1;
+              const isThisRunning = runningTestCaseIdx === tcIdx;
+              const execMs = formatMs(tc.executionTime);
 
-                  {/* I/O rows */}
-                  <div className="space-y-1.5">
-                    <div className="flex gap-1.5 items-start">
-                      <span className="w-16 shrink-0 text-gray-400 pt-0.5">
-                        Example:
+              return (
+                <li key={tc.id} className="bg-card">
+                  {/* ── Row head (always visible) ── */}
+                  <button
+                    type="button"
+                    onClick={() => toggle(index)}
+                    aria-expanded={isOpen}
+                    aria-controls={`tc-panel-${tc.id}`}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset transition-colors duration-(--motion-fast) ease-(--motion-ease)"
+                  >
+                    <ChevronRight
+                      className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-(--motion-fast) ease-(--motion-ease) ${
+                        isOpen ? "rotate-90" : ""
+                      }`}
+                      aria-hidden
+                    />
+
+                    <span className="text-xs font-semibold text-muted-foreground tabular-nums shrink-0 w-12">
+                      #{index + 1}
+                    </span>
+
+                    <Icon
+                      className={`w-4 h-4 shrink-0 ${
+                        tc.status === "passed"
+                          ? "text-success"
+                          : tc.status === "failed" || tc.status === "error"
+                            ? "text-destructive"
+                            : "text-muted-foreground"
+                      }`}
+                      aria-hidden
+                    />
+
+                    <Badge variant={cfg.badgeVariant} className="shrink-0">
+                      {isThisRunning ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Running
+                        </>
+                      ) : (
+                        cfg.label
+                      )}
+                    </Badge>
+
+                    {execMs && (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
+                        <Timer className="w-3 h-3" aria-hidden />
+                        {execMs}
                       </span>
-                      <code className="font-mono bg-white/70 rounded px-1.5 py-0.5 border border-gray-200 text-gray-700 whitespace-pre-wrap break-all min-w-0 flex-1">
-                        {tc.input || "(empty)"}
-                      </code>
-                    </div>
-                    <div className="flex gap-1.5 items-start">
-                      <span className="w-16 shrink-0 text-gray-400 pt-0.5">
-                        Expected:
-                      </span>
-                      <code className="font-mono bg-white/70 rounded px-1.5 py-0.5 border border-gray-200 text-gray-700 whitespace-pre-wrap break-all min-w-0 flex-1">
-                        {tc.expectedOutput || "(empty)"}
-                      </code>
-                    </div>
-                    {(tc.actualOutput !== undefined || tc.errorMessage) && (
-                      <div className="flex gap-1.5 items-start">
-                        <span className="w-16 shrink-0 text-gray-400 pt-0.5">
-                          Output:
-                        </span>
-                        <code
-                          className={`font-mono rounded px-1.5 py-0.5 border whitespace-pre-wrap break-all min-w-0 flex-1 ${
-                            tc.status === "passed"
-                              ? "bg-gray-50 border-gray-200 text-gray-700"
-                              : "bg-red-50 border-red-200 text-red-600"
-                          }`}
-                        >
-                          {tc.status === "passed"
-                            ? tc.actualOutput || "(empty)"
-                            : tc.status === "error"
-                              ? (tc.errorMessage || tc.actualOutput || "(build failed)")
-                              : tc.actualOutput || "(wrong)"}
-                        </code>
-                      </div>
                     )}
-                  </div>
-                </div>
+
+                    {tc.hasTestFile && onRunTestCase && (
+                      <span
+                        role="button"
+                        tabIndex={isRunning || isThisRunning ? -1 : 0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isRunning && !isThisRunning) onRunTestCase(tcIdx);
+                        }}
+                        onKeyDown={(e) => {
+                          if (
+                            (e.key === "Enter" || e.key === " ") &&
+                            !isRunning &&
+                            !isThisRunning
+                          ) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onRunTestCase(tcIdx);
+                          }
+                        }}
+                        disabled={isRunning || isThisRunning}
+                        title="Run this test case"
+                        aria-label={`Run test case ${index + 1}`}
+                        className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-md bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer btn-press"
+                      >
+                        {isThisRunning ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5 fill-primary-foreground" />
+                        )}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* ── Collapsible detail panel ── */}
+                  {isOpen && (
+                    <div
+                      id={`tc-panel-${tc.id}`}
+                      className="px-4 pb-3 pt-1 space-y-1.5 bg-muted/40 border-t border-border"
+                    >
+                      {tc.isHidden ? (
+                        <p className="text-xs text-muted-foreground italic inline-flex items-center gap-1.5">
+                          <EyeOff className="w-3 h-3" aria-hidden />
+                          Hidden input &amp; expected output — only the grader
+                          sees them.
+                        </p>
+                      ) : (
+                        <>
+                          <IoRow
+                            label="Input"
+                            value={tc.input}
+                            tone="default"
+                          />
+                          <IoRow
+                            label="Expected"
+                            value={tc.expectedOutput}
+                            tone="default"
+                          />
+                        </>
+                      )}
+
+                      {(tc.actualOutput !== undefined ||
+                        tc.errorMessage) && (
+                        <IoRow
+                          label="Output"
+                          value={
+                            tc.status === "error"
+                              ? tc.errorMessage ||
+                                tc.actualOutput ||
+                                "(build failed)"
+                              : tc.actualOutput || "(wrong)"
+                          }
+                          tone={
+                            tc.status === "passed" ? "success" : "destructive"
+                          }
+                        />
+                      )}
+
+                      {tc.status === "pending" &&
+                        tc.actualOutput === undefined &&
+                        !tc.errorMessage && (
+                          <p className="text-xs text-muted-foreground pt-1">
+                            Click <Play className="inline w-3 h-3 mx-0.5" />{" "}
+                            on a test case to run it, or hit{" "}
+                            <kbd className="px-1 py-0.5 rounded border border-border bg-card text-[10px] font-mono">
+                              Run
+                            </kbd>{" "}
+                            above to run all.
+                          </p>
+                        )}
+                    </div>
+                  )}
+                </li>
               );
             })}
-          </div>
+
+            {hiddenCount > 0 && (
+              <li className="px-4 py-2 text-xs text-muted-foreground bg-muted/40 inline-flex items-center gap-2">
+                <EyeOff className="w-3.5 h-3.5" aria-hidden />
+                {hiddenCount} hidden test{" "}
+                {hiddenCount === 1 ? "case" : "cases"} (grading only)
+              </li>
+            )}
+          </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Tiny presentational helpers (kept here so the file stays self-contained) ── */
+
+function SummaryStat({
+  label,
+  value,
+  variant,
+}: {
+  label: string;
+  value: number;
+  variant: "success" | "destructive" | "default";
+}) {
+  const valueClass =
+    variant === "success"
+      ? "text-success"
+      : variant === "destructive"
+        ? "text-destructive"
+        : "text-muted-foreground";
+  return (
+    <div className="flex items-baseline gap-1">
+      <span
+        className={`text-sm font-semibold tabular-nums ${valueClass}`}
+        aria-label={`${value} ${label.toLowerCase()}`}
+      >
+        {value}
+      </span>
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function EmptyState({
+  icon,
+  title,
+  subtitle,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground px-6 text-center">
+      {icon}
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      {subtitle && <p className="text-xs">{subtitle}</p>}
+    </div>
+  );
+}
+
+function IoRow({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "default" | "success" | "destructive";
+}) {
+  const valueClass =
+    tone === "success"
+      ? "bg-success/10 border-success/30 text-foreground"
+      : tone === "destructive"
+        ? "bg-destructive/10 border-destructive/30 text-destructive"
+        : "bg-card border-border text-foreground";
+  return (
+    <div className="flex gap-2 items-start">
+      <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground pt-1 w-16">
+        {label}
+      </span>
+      <code
+        className={`font-mono text-xs rounded-md border px-2 py-1 whitespace-pre-wrap wrap-break-word min-w-0 flex-1 ${valueClass}`}
+      >
+        {value || "(empty)"}
+      </code>
     </div>
   );
 }
