@@ -1,12 +1,18 @@
 # ===========================================
-# DERIT - Node.js/Common
+# DERIT - Root .gitignore
+# ===========================================
+
+# ===========================================
+# Dependencies
 # ===========================================
 node_modules/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+yarn-error.log
 lerna-debug.log*
+pnpm-debug.log*
 
 # ===========================================
 # Build outputs
@@ -19,10 +25,12 @@ build/
 out/
 
 # ===========================================
-# Environment variables
+# Environment variables & secrets
 # ===========================================
 .env
 .env.local
+.env.development
+.env.production
 .env.*.local
 !.env.example
 
@@ -37,49 +45,81 @@ out/
 Thumbs.db
 .vscode/
 *.code-workspace
+*.sublime-*
+
+# ===========================================
+# OS files
+# ===========================================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # ===========================================
 # Test & Coverage
 # ===========================================
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
 
 # ===========================================
-# Debug logs
+# Package managers lock files (except monorepo root)
+# ===========================================
+# Keep root pnpm-lock.yaml for monorepo
+apps/web/package-lock.json
+apps/server/package-lock.json
+packages/*/package-lock.json
+
+# ===========================================
+# Cache & temporary
 # ===========================================
 .npm/
 .eslintcache
 .node_repl_history
+*.tsbuildinfo
+.parcel-cache/
+.cache/
 
 # ===========================================
 # Apps specific
 # ===========================================
 
-# Web (React)
+# Web (React/Vite)
 apps/web/build/
 apps/web/.react-router/
+apps/web/dist/
+apps/web/node_modules/
+apps/web/playwright-report/
 
-# Server (Express)
+# Server (Node.js/Express)
 apps/server/uploads/
 apps/server/*.local
 apps/server/data/
-
-# ===========================================
-# Services specific
-# ===========================================
-services/java-compiler/*.tar
+apps/server/temp/
+apps/server/*.log
+apps/server/node_modules/
 
 # ===========================================
 # Packages (shared)
 # ===========================================
 packages/shared/dist/
+packages/shared/node_modules/
 
 # ===========================================
-# Cursor Agent
+# Services & Scripts
+# ===========================================
+scripts/*.log
+verifications/*.log
+
+# ===========================================
+# Cursor Agent artifacts
 # ===========================================
 .agents/
 cursor-projects/
 skills-lock.json
+.hallmark/
+agent-transcripts/
 
 # ===========================================
 # Docker
@@ -87,8 +127,28 @@ skills-lock.json
 .docker/
 
 # ===========================================
-# Misc
+# Development artifacts
 # ===========================================
-*.tsbuildinfo
-.eslintcache
-.hallmark
+*.pid
+*.seed
+*.pid.lock
+
+# ===========================================
+# Large test data files
+# ===========================================
+*.examtemplates.json
+test.examtemplates.json
+
+# ===========================================
+# MongoDB dumps
+# ===========================================
+*.dump
+*.bson
+
+# ===========================================
+# Logs
+# ===========================================
+logs/
+*.log
+access.log
+error.log

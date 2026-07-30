@@ -1,20 +1,29 @@
 # ===========================================
-# Web App - .dockerignore
+# Root .dockerignore
 # ===========================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# ===========================================
+# Dependencies (install in containers)
+# ===========================================
+node_modules/
+apps/web/node_modules/
+apps/server/node_modules/
+packages/*/node_modules/
 
 # ===========================================
 # Build outputs
 # ===========================================
-build/
 dist/
-.next/
-.react-router/
-out/
-
-# ===========================================
-# Dependencies (install from package.json)
-# ===========================================
-node_modules/
+dist-ssr/
+build/
+apps/web/build/
+apps/web/dist/
+apps/server/build/
 
 # ===========================================
 # Environment & secrets
@@ -22,22 +31,41 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.example
+
+# ===========================================
+# Development artifacts
+# ===========================================
+.docker/
+.agents/
+cursor-projects/
+skills-lock.json
+.hallmark/
+agent-transcripts/
+
+# ===========================================
+# IDE
+# ===========================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 
 # ===========================================
 # Test & Coverage
 # ===========================================
+coverage/
+.nyc_output/
 playwright-report/
 test-results/
-coverage/
 
 # ===========================================
-# IDE & Editor
+# Logs
 # ===========================================
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+*.log
+logs/
+npm-debug.log*
 
 # ===========================================
 # OS files
@@ -46,21 +74,31 @@ coverage/
 Thumbs.db
 
 # ===========================================
-# Documentation (not needed in container)
+# Documentation
 # ===========================================
 README.md
 *.md
+design.md
 
 # ===========================================
-# Development artifacts
+# Docker files at root (not needed in containers)
 # ===========================================
-.cache/
-.eslintcache
-*.tsbuildinfo
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# ===========================================
+# Large data files
+# ===========================================
+*.examtemplates.json
+test.examtemplates.json
+*.dump
+*.bson
+
+# ===========================================
+# Misc
+# ===========================================
 *.local
-
-# ===========================================
-# Logs
-# ===========================================
-*.log
-npm-debug.log*
+*.pid
+.cache/
+.parcel-cache/

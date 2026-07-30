@@ -1,6 +1,51 @@
-node_modules
+# ===========================================
+# Server App - .gitignore
+# ===========================================
+
+# Dependencies
+node_modules/
 npm-lock.yaml
+
+# Environment
 .env
+.env.local
+.env.development
+.env.production
 .dev.env
-temp/*
+
+# Uploads & temp (user data)
 uploads/
+temp/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Test coverage
+coverage/
+.nyc_output/
+test-results/
+
+# IDE
+.DS_Store
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build
+build/
+dist/
+
+# Cache
+.eslintcache
+*.tsbuildinfo
+
+# Development
+*.local
+*.pid
+
+# MongoDB dumps
+*.dump
+*.bson

@@ -5,12 +5,11 @@ WORKDIR /app
 # Install Java (JDK 11), Python 3, and nsjail for sandboxing
 RUN apk add --no-cache openjdk11 python3 bash nsjail
 
-COPY package.json ./
-RUN npm ci
+COPY package.json package-lock.json ./
+RUN NODE_ENV=development npm install --include=dev
 
 COPY . .
 
 EXPOSE 3000
 
-ENTRYPOINT ["tini", "--"]
 CMD ["nodemon", "index.js"]

@@ -17,10 +17,10 @@ services:
       dockerfile: Dockerfile.dev
     image: derit-server:dev
     ports:
-      - "3000:3000"
+      - "5001:5001"
     environment:
       - NODE_ENV=development
-      - MONGODB_URI=mongodb://mongodb:27017/derit
+      - MONGODB_CONNECTIONSTRING=mongodb://mongodb:27017/derit
       - NSJAIL_PATH=/usr/bin/nsjail
       - NSJAIL_CONFIG_DIR=/app/config
       - NSJAIL_WORKSPACE_DIR=/workspace
@@ -46,7 +46,7 @@ services:
     cap_add:
       - SYS_ADMIN
       - NET_ADMIN
-    command: nodemon index.js
+    command: npm run dev
 
   web:
     build:
@@ -56,13 +56,13 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:3000
+      - VITE_API_URL=http://localhost:5001
     volumes:
       - ./apps/web:/app
       - /app/node_modules
     depends_on:
       - server
-    command: npm run dev
+    command: npm run dev -- --host 0.0.0.0
 
 volumes:
   mongodb_dev_data:

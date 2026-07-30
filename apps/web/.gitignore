@@ -1,7 +1,47 @@
-.DS_Store
-.env
-/node_modules/
+# ===========================================
+# Web App - .gitignore
+# ===========================================
 
-# React Router
-/.react-router/
-/build/
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+.next/
+.react-router/
+out/
+
+# Environment
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# IDE
+.DS_Store
+.vscode/
+*.swp
+*.swo
+*~
+
+# Test & Coverage
+playwright-report/
+test-results/
+coverage/
+.nyc_output/
+
+# Cache
+.cache/
+.eslintcache
+.parcel-cache/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Development
+*.local
