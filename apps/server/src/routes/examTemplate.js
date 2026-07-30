@@ -57,52 +57,57 @@ const examTemplateRouter = Router();
  *         description: Access denied
  */
 // Create exam template with exam codes (Lecturer only)
-examTemplateRouter.post("/", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
-  try {
-    const {
-      templateName,
-      examType, // 'OOP', 'DSA', 'General'
-      language, // 'java' or 'python'
-      duration,
-      examCodes, // Array of exam codes with PDF and questions
-    } = req.body;
+examTemplateRouter.post(
+  "/",
+  isAuthenticated,
+  isLecturerOrAdmin,
+  async (req, res) => {
+    try {
+      const {
+        templateName,
+        examType, // 'OOP', 'DSA', 'General'
+        language, // 'java' or 'python'
+        duration,
+        examCodes, // Array of exam codes with PDF and questions
+      } = req.body;
 
-    // Validate required fields
-    if (!templateName || !examType || !language || !duration) {
-      return res.status(400).json({
-        error:
-          "Missing required fields: templateName, examType, language, duration",
+      // Validate required fields
+      if (!templateName || !examType || !language || !duration) {
+        return res.status(400).json({
+          error:
+            "Missing required fields: templateName, examType, language, duration",
+        });
+      }
+
+      if (!examCodes || examCodes.length === 0) {
+        return res.status(400).json({
+          error: "At least one exam code is required",
+        });
+      }
+
+      // Auto-set language based on exam type if not provided correctly
+      let finalLanguage = language;
+      if (examType === "OOP" || examType === "DSA") {
+        finalLanguage = "java"; // Force Java for OOP/DSA
+      }
+
+      // Schema pre-save hook will calculate totalPoints automatically
+      const newTemplate = await ExamTemplateModel.create({
+        templateName,
+        examType,
+        language: finalLanguage,
+        duration,
+        examCodes,
+        createdBy: req.dbUser._id,
       });
+
+      res.status(201).json({ template: newTemplate });
+    } catch (error) {
+      console.error("Error creating exam template:", error);
+      res.status(500).json({ error: error.message });
     }
-
-    if (!examCodes || examCodes.length === 0) {
-      return res.status(400).json({
-        error: "At least one exam code is required",
-      });
-    }
-
-    // Auto-set language based on exam type if not provided correctly
-    let finalLanguage = language;
-    if (examType === "OOP" || examType === "DSA") {
-      finalLanguage = "java"; // Force Java for OOP/DSA
-    }
-
-    // Schema pre-save hook will calculate totalPoints automatically
-    const newTemplate = await ExamTemplateModel.create({
-      templateName,
-      examType,
-      language: finalLanguage,
-      duration,
-      examCodes,
-      createdBy: req.dbUser._id,
-    });
-
-    res.status(201).json({ template: newTemplate });
-  } catch (error) {
-    console.error("Error creating exam template:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
+  },
+);
 
 /**
  * @swagger
@@ -128,23 +133,28 @@ examTemplateRouter.post("/", isAuthenticated, isLecturerOrAdmin, async (req, res
  *         description: Access denied
  */
 // Get all templates (created by current lecturer)
-examTemplateRouter.get("/", isAuthenticated, isLecturerOrAdmin, async (req, res) => {
-  try {
-    const templates = await ExamTemplateModel.find({
-      createdBy: req.dbUser._id,
-    }).sort({ createdAt: -1 });
+examTemplateRouter.get(
+  "/",
+  isAuthenticated,
+  isLecturerOrAdmin,
+  async (req, res) => {
+    try {
+      const templates = await ExamTemplateModel.find({
+        createdBy: req.dbUser._id,
+      }).sort({ createdAt: -1 });
 
-    // Add exam code count to each template
-    const templatesWithCount = templates.map((template) => ({
-      ...template.toObject(),
-      examCodeCount: template.examCodes.length,
-    }));
+      // Add exam code count to each template
+      const templatesWithCount = templates.map((template) => ({
+        ...template.toObject(),
+        examCodeCount: template.examCodes.length,
+      }));
 
-    res.json({ templates: templatesWithCount });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+      res.json({ templates: templatesWithCount });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
 
 /**
  * @swagger
@@ -342,9 +352,7 @@ examTemplateRouter.post(
       const recipient = await UserModel.findOne({ email });
 
       if (!recipient) {
-        return res
-          .status(404)
-          .json({ error: "No user found with that email" });
+        return res.status(404).json({ error: "No user found with that email" });
       }
 
       if (recipient._id.toString() === req.dbUser._id.toString()) {
@@ -354,7 +362,8 @@ examTemplateRouter.post(
       }
 
       // Generate random 6-character alphanumeric string
-      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      const chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
       let randomSuffix = "";
       for (let i = 0; i < 6; i++) {
         randomSuffix += chars.charAt(Math.floor(Math.random() * chars.length));

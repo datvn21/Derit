@@ -45,7 +45,7 @@ const createTestApp = (userId = "test-user-123", role = "lecturer") => {
       resave: false,
       saveUninitialized: false,
       cookie: { secure: false },
-    })
+    }),
   );
   app.use(passport.initialize());
   app.use(passport.session());
@@ -80,19 +80,32 @@ describe("Exam Templates Routes", () => {
   beforeAll(async () => {
     // Ensure MongoDB is connected
     if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(process.env.MONGODB_CONNECTIONSTRING || "mongodb://localhost:27017/derit-test");
+      await mongoose.connect(
+        process.env.MONGODB_CONNECTIONSTRING ||
+          "mongodb://localhost:27017/derit-test",
+      );
     }
-    
+
     // Create test users
     await UserModel.findOneAndUpdate(
       { googleId: lecturerId },
-      { googleId: lecturerId, email: "lecturer@test.com", name: "Test Lecturer", role: "lecturer" },
-      { upsert: true, new: true }
+      {
+        googleId: lecturerId,
+        email: "lecturer@test.com",
+        name: "Test Lecturer",
+        role: "lecturer",
+      },
+      { upsert: true, new: true },
     );
     await UserModel.findOneAndUpdate(
       { googleId: studentId },
-      { googleId: studentId, email: "student@test.com", name: "Test Student", role: "student" },
-      { upsert: true, new: true }
+      {
+        googleId: studentId,
+        email: "student@test.com",
+        name: "Test Student",
+        role: "student",
+      },
+      { upsert: true, new: true },
     );
   });
 
@@ -115,10 +128,10 @@ describe("Exam Templates Routes", () => {
           code: "TEST001",
           pdf: "test.pdf",
           questions: [
-            { questionText: "Test question?", points: 10, testCases: [] }
-          ]
-        }
-      ]
+            { questionText: "Test question?", points: 10, testCases: [] },
+          ],
+        },
+      ],
     };
 
     it("should create a new exam template", async () => {
@@ -148,7 +161,9 @@ describe("Exam Templates Routes", () => {
         .send({ ...validTemplateData, examCodes: [] });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain("At least one exam code is required");
+      expect(response.body.error).toContain(
+        "At least one exam code is required",
+      );
     });
 
     it("should force Java language for OOP exam type", async () => {
@@ -163,7 +178,11 @@ describe("Exam Templates Routes", () => {
     it("should allow Python language for General exam type", async () => {
       const response = await request(app)
         .post("/exam-templates")
-        .send({ ...validTemplateData, examType: "General", language: "python" });
+        .send({
+          ...validTemplateData,
+          examType: "General",
+          language: "python",
+        });
 
       expect(response.status).toBe(201);
       expect(response.body.template.language).toBe("python");
@@ -221,7 +240,9 @@ describe("Exam Templates Routes", () => {
         examType: "OOP",
         language: "java",
         duration: 60,
-        examCodes: [{ code: "TEST", questions: [{ questionText: "Q1", points: 10 }] }],
+        examCodes: [
+          { code: "TEST", questions: [{ questionText: "Q1", points: 10 }] },
+        ],
         createdBy: lecturer._id,
       });
       templateId = template._id.toString();
@@ -304,7 +325,9 @@ describe("Exam Templates Routes", () => {
     });
 
     it("should delete template", async () => {
-      const response = await request(app).delete(`/exam-templates/${templateId}`);
+      const response = await request(app).delete(
+        `/exam-templates/${templateId}`,
+      );
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe("Template deleted successfully");
@@ -340,16 +363,22 @@ describe("Exam Templates Routes", () => {
     });
 
     it("should publish unpublished template", async () => {
-      const response = await request(app).patch(`/exam-templates/${templateId}/publish`);
+      const response = await request(app).patch(
+        `/exam-templates/${templateId}/publish`,
+      );
 
       expect(response.status).toBe(200);
       expect(response.body.template.isPublished).toBe(true);
     });
 
     it("should unpublish published template", async () => {
-      await ExamTemplateModel.findByIdAndUpdate(templateId, { isPublished: true });
+      await ExamTemplateModel.findByIdAndUpdate(templateId, {
+        isPublished: true,
+      });
 
-      const response = await request(app).patch(`/exam-templates/${templateId}/publish`);
+      const response = await request(app).patch(
+        `/exam-templates/${templateId}/publish`,
+      );
 
       expect(response.status).toBe(200);
       expect(response.body.template.isPublished).toBe(false);
@@ -389,7 +418,9 @@ describe("Exam Templates Routes", () => {
         .send({ email: "lecturer@test.com" });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain("cannot share a template with yourself");
+      expect(response.body.error).toContain(
+        "cannot share a template with yourself",
+      );
     });
 
     it("should return 400 when email is missing", async () => {

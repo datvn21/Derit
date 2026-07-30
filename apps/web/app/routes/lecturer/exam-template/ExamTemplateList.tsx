@@ -34,7 +34,7 @@ import { cn } from "~/lib/utils";
 type ViewMode = "grid" | "list";
 
 const EXAM_TYPES = ["OOP", "DSA", "General"] as const;
-const LANGUAGES = ["java", "python", "cpp", "javascript"] as const;
+const LANGUAGES = ["java", "python", "cpp"] as const;
 
 export default function ExamTemplateList() {
   const navigate = useNavigate();
@@ -111,7 +111,9 @@ export default function ExamTemplateList() {
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [languageFilter, setLanguageFilter] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "published" | "draft"
+  >("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
   const filtered = useMemo(() => {
@@ -212,7 +214,9 @@ export default function ExamTemplateList() {
               label="Status"
               options={["published", "draft"]}
               value={statusFilter === "all" ? null : statusFilter}
-              onChange={(v) => setStatusFilter((v ?? "all") as typeof statusFilter)}
+              onChange={(v) =>
+                setStatusFilter((v ?? "all") as typeof statusFilter)
+              }
               format={(s) => (s === "published" ? "Published" : "Draft")}
             />
             {hasActiveFilter && (
@@ -400,17 +404,17 @@ function FilterPills<T extends string>({
 }) {
   return (
     <div className="inline-flex items-center gap-1.5">
-      <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider mr-1">
+      <span className="text-xs text-muted-foreground font-medium tracking-wider mr-1">
         {label}
       </span>
-      <div className="inline-flex items-center gap-1 bg-muted/50 rounded-md p-0.5">
+      <div className="inline-flex items-center gap-1 bg-muted rounded-md p-0.5">
         <button
           type="button"
           onClick={() => onChange(null)}
           className={cn(
             "h-6 px-2 rounded text-xs font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             value === null
-              ? "bg-card text-foreground shadow-sm"
+              ? "bg-primary text-white shadow-sm"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
@@ -424,7 +428,7 @@ function FilterPills<T extends string>({
             className={cn(
               "h-6 px-2 rounded text-xs font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               value === opt
-                ? "bg-card text-foreground shadow-sm"
+                ? "bg-primary text-white shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -527,10 +531,8 @@ function TemplateCard({
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <FileText className="w-4 h-4" />
             <span>
-              {template.examCodeCount ||
-                template.examCodes?.length ||
-                0}{" "}
-              exam codes
+              {template.examCodeCount || template.examCodes?.length || 0} exam
+              codes
             </span>
           </div>
 
@@ -598,7 +600,7 @@ function TemplateRow({
   return (
     <div className="flex items-center gap-4 px-4 py-3 hover:bg-muted/30 transition-colors">
       <div className="w-9 h-9 rounded-md bg-primary/10 text-primary flex items-center justify-center font-mono text-sm font-semibold shrink-0">
-        {initials(template.templateName)}
+        {template.examType}
       </div>
 
       <div className="flex-1 min-w-0">
@@ -622,12 +624,7 @@ function TemplateRow({
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onEdit}
-          className="h-8"
-        >
+        <Button variant="outline" size="sm" onClick={onEdit} className="h-8">
           <Edit className="w-3 h-3 mr-1" />
           Edit
         </Button>

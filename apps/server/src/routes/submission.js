@@ -17,7 +17,10 @@ function normalizeFiles(files) {
   if (!files?.length) return files || [];
   return files.map((f) => ({
     ...f,
-    content: typeof f.content === "string" ? f.content.replace(/\r\n/g, "\n").replace(/\r/g, "\n") : f.content,
+    content:
+      typeof f.content === "string"
+        ? f.content.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+        : f.content,
   }));
 }
 function normalizeCode(code) {
@@ -40,8 +43,8 @@ async function resolveCurrentUser(req) {
 // Production deployments should swap this for a Redis-backed limiter
 // shared between processes.
 const runConsoleRateLimiter = new KeyedRateLimiter({
-  limit: 3,            // max requests per user per window
-  windowMs: 10_000,    // 10 seconds
+  limit: 3, // max requests per user per window
+  windowMs: 10_000, // 10 seconds
   maxEntries: 5000,
 });
 
@@ -63,8 +66,11 @@ function runConsoleLimiter(req, res, next) {
 // ─── B: Bounded SSE infrastructure for push-based result delivery ───────────────
 // Key format: `${submissionId}:${questionNumber}[:${testCaseIndex}]`
 const SUBMISSION_SSE_MAX_KEYS = 2000;
-const submissionSSEMap = new Map();    // key → Set<res>
-const submissionResultCache = new BoundedCache({ maxEntries: 2000, ttlMs: 60_000 });
+const submissionSSEMap = new Map(); // key → Set<res>
+const submissionResultCache = new BoundedCache({
+  maxEntries: 2000,
+  ttlMs: 60_000,
+});
 
 function sseKey(submissionId, questionNumber, testCaseIndex) {
   const base = `${submissionId}:${questionNumber}`;
@@ -90,7 +96,10 @@ function emitSSEResult(key, data) {
   if (!clients) return;
   const payload = `data: ${JSON.stringify(data)}\n\n`;
   for (const res of clients) {
-    try { res.write(payload); res.end(); } catch (_) {}
+    try {
+      res.write(payload);
+      res.end();
+    } catch (_) {}
   }
   submissionSSEMap.delete(key);
 }
@@ -244,12 +253,14 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
           if (!tc)
             throw new Error(`testCaseIndex ${testCaseIndex} out of bounds`);
 
-
           // Build file list: student files (or fallback to code field) + grader testFile + extraFiles
           const studentMainFile = questionSub.mainFile || "Main.java";
           const execFiles =
             questionSub.files?.length > 0
-              ? questionSub.files.map((f) => ({ name: f.name, content: f.content }))
+              ? questionSub.files.map((f) => ({
+                  name: f.name,
+                  content: f.content,
+                }))
               : [{ name: studentMainFile, content: questionSub.code || "" }];
           // Inject extraFiles first (so testFile can override if names clash)
           if (tc.extraFiles && tc.extraFiles.length > 0) {
@@ -272,7 +283,6 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
           // testRunFile → grader file (compiled second, then run); undefined if no grader
           const hasGrader = !!(tc.testFile?.name && tc.testFile?.content);
           const graderFile = hasGrader ? tc.testFile.name : null;
-
 
           const { results, status } = await executeCodeLocally(
             {
@@ -343,7 +353,10 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
             // Build file list: student files (or fallback to code field) + extraFiles + testFile (grader)
             const execFiles =
               questionSub.files?.length > 0
-                ? questionSub.files.map((f) => ({ name: f.name, content: f.content }))
+                ? questionSub.files.map((f) => ({
+                    name: f.name,
+                    content: f.content,
+                  }))
                 : [{ name: studentMainFile, content: questionSub.code || "" }];
 
             if (tc.extraFiles?.length > 0) {
@@ -359,7 +372,10 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
             if (hasGrader) {
               const i = execFiles.findIndex((f) => f.name === tc.testFile.name);
               if (i >= 0) execFiles.splice(i, 1);
-              execFiles.push({ name: tc.testFile.name, content: tc.testFile.content });
+              execFiles.push({
+                name: tc.testFile.name,
+                content: tc.testFile.content,
+              });
             }
 
             const { results, status } = await executeCodeLocally(
@@ -392,7 +408,11 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
             if (passed) allPassed++;
             allResults.push({
               testCaseId: tcIdx,
-              status: passed ? "passed" : r?.error?.length > 0 ? "error" : "failed",
+              status: passed
+                ? "passed"
+                : r?.error?.length > 0
+                  ? "error"
+                  : "failed",
               actualOutput: r?.output ?? "",
               errorMessage: r?.error ?? "",
               executionTime: r?.executionTime ?? 0,
@@ -413,7 +433,7 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
                 : 0;
 
             const hasRuntimeErr = allResults.some(
-              (r) => r.status === "error" && r.errorMessage?.length > 0
+              (r) => r.status === "error" && r.errorMessage?.length > 0,
             );
             if (allPassed === tcList.length) {
               questionSub.status = "accepted";
@@ -428,15 +448,24 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
         }
 
         // Recalculate final score — average of all question scores (thang 10)
-        const scoredSubs = submissionToUpdate.submissions.filter((s) => s.totalScore !== undefined);
-        submissionToUpdate.finalScore = scoredSubs.length > 0
-          ? Math.round((scoredSubs.reduce((sum, s) => sum + (s.totalScore || 0), 0) / scoredSubs.length) * 10) / 10
-          : 0;
+        const scoredSubs = submissionToUpdate.submissions.filter(
+          (s) => s.totalScore !== undefined,
+        );
+        submissionToUpdate.finalScore =
+          scoredSubs.length > 0
+            ? Math.round(
+                (scoredSubs.reduce((sum, s) => sum + (s.totalScore || 0), 0) /
+                  scoredSubs.length) *
+                  10,
+              ) / 10
+            : 0;
 
         await submissionToUpdate.save();
 
         // ── Summary log ──────────────────────────────────────────────────────
-        console.log(`[submit] ✓ ${user.name} | session="${session.sessionName}" | Q${questionNumber} score=${questionSub.totalScore?.toFixed(1) ?? 0}/10 | status=${questionSub.status}`);
+        console.log(
+          `[submit] ✓ ${user.name} | session="${session.sessionName}" | Q${questionNumber} score=${questionSub.totalScore?.toFixed(1) ?? 0}/10 | status=${questionSub.status}`,
+        );
 
         // ─ B: push result to any waiting SSE client ─────────────────────────
         const ssePayload = {
@@ -485,9 +514,10 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
 
     // Log code run activity for audit trail
     logActivity({
-      activityType: testCaseIndex !== undefined && testCaseIndex !== null
-        ? "code_run_testcase"
-        : "code_run_all",
+      activityType:
+        testCaseIndex !== undefined && testCaseIndex !== null
+          ? "code_run_testcase"
+          : "code_run_all",
       userId: user._id,
       examSessionId,
       questionNumber,
@@ -516,7 +546,11 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
 // If result is already cached (execution finished before client connected), respond immediately.
 submissionRouter.get("/:id/events", isAuthenticated, (req, res) => {
   const { qn, tc } = req.query; // qn = questionNumber, tc = testCaseIndex (optional)
-  const key = sseKey(req.params.id, qn, tc !== undefined ? Number(tc) : undefined);
+  const key = sseKey(
+    req.params.id,
+    qn,
+    tc !== undefined ? Number(tc) : undefined,
+  );
 
   // Result already ready? Flush immediately as SSE then close.
   const cached = submissionResultCache.get(key);
@@ -542,7 +576,11 @@ submissionRouter.get("/:id/events", isAuthenticated, (req, res) => {
       // Drop the oldest entry to keep memory bounded.
       const oldestKey = submissionSSEMap.keys().next().value;
       const oldestSet = submissionSSEMap.get(oldestKey);
-      if (oldestSet) for (const r of oldestSet) try { r.end(); } catch (_) {}
+      if (oldestSet)
+        for (const r of oldestSet)
+          try {
+            r.end();
+          } catch (_) {}
       submissionSSEMap.delete(oldestKey);
     }
     submissionSSEMap.set(key, new Set());
@@ -554,7 +592,9 @@ submissionRouter.get("/:id/events", isAuthenticated, (req, res) => {
 
   // Safety timeout: 2 minutes
   const guard = setTimeout(() => {
-    try { res.end(); } catch (_) {}
+    try {
+      res.end();
+    } catch (_) {}
     removeSSEClient(key, res);
   }, 120_000);
   req.on("close", () => clearTimeout(guard));
@@ -651,7 +691,9 @@ submissionRouter.get(
         createdBy: req.dbUser._id,
       });
       if (!session) {
-        return res.status(404).json({ error: "Session not found or access denied" });
+        return res
+          .status(404)
+          .json({ error: "Session not found or access denied" });
       }
 
       const submissions = await StudentSubmissionModel.find({
@@ -667,8 +709,6 @@ submissionRouter.get(
           if (q.questionNumber > maxQ) maxQ = q.questionNumber;
         }
       }
-
-
 
       // Sort submitted first by score descending for ranking
       const submitted = submissions.filter((s) => s.isSubmitted);
@@ -705,8 +745,6 @@ submissionRouter.get(
         "Tab Switches",
       ];
 
-
-
       // Build rows
       const rows = submissions.map((sub) => {
         const qMap = new Map();
@@ -714,7 +752,9 @@ submissionRouter.get(
         let totalTests = 0;
 
         for (const q of sub.submissions || []) {
-          const passed = (q.testResults || []).filter((r) => r.status === "passed").length;
+          const passed = (q.testResults || []).filter(
+            (r) => r.status === "passed",
+          ).length;
           const total = (q.testResults || []).length;
           qMap.set(q.questionNumber, { passed, total });
           totalPassed += passed;
@@ -727,11 +767,20 @@ submissionRouter.get(
           return d ? safe(`${d.passed}/${d.total}`) : "—";
         });
 
-        const pct = totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) : 0;
-        const rank = sub.isSubmitted ? (rankMap.get(sub._id.toString()) ?? "—") : "—";
-        const summary = totalTests > 0 ? safe(`${totalPassed}/${totalTests}`) : "—";
+        const pct =
+          totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) : 0;
+        const rank = sub.isSubmitted
+          ? (rankMap.get(sub._id.toString()) ?? "—")
+          : "—";
+        const summary =
+          totalTests > 0 ? safe(`${totalPassed}/${totalTests}`) : "—";
         // finalScore đã được BE tính theo thang 10
-        const score10 = sub.isSubmitted ? (sub.finalScore ?? (totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) / 10 : 0)) : "—";
+        const score10 = sub.isSubmitted
+          ? (sub.finalScore ??
+            (totalTests > 0
+              ? Math.round((totalPassed / totalTests) * 100) / 10
+              : 0))
+          : "—";
 
         return [
           rank,
@@ -741,7 +790,11 @@ submissionRouter.get(
           sub.examCodeNumber ?? "—",
           ...qCols,
           summary,
-          sub.isSubmitted ? (typeof score10 === "number" ? score10.toFixed(1) : score10) : "—",
+          sub.isSubmitted
+            ? typeof score10 === "number"
+              ? score10.toFixed(1)
+              : score10
+            : "—",
           sub.isSubmitted ? `${pct}%` : "—",
           sub.isSubmitted ? "Yes" : "No",
           sub.tabSwitchCount || 0,
@@ -753,16 +806,15 @@ submissionRouter.get(
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="results_${session.sessionName.replace(/[^a-z0-9]/gi, "_")}_${Date.now()}.csv"`
+        `attachment; filename="results_${session.sessionName.replace(/[^a-z0-9]/gi, "_")}_${Date.now()}.csv"`,
       );
       res.send("\uFEFF" + csv); // BOM for Excel UTF-8
     } catch (error) {
       console.error("[export-csv] error:", error);
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
-
 
 // Get student's submission WITH testcase details (input + expectedOutput from template) — Lecturer only
 submissionRouter.get(
@@ -777,7 +829,9 @@ submissionRouter.get(
       }).populate("examTemplateId");
 
       if (!session) {
-        return res.status(404).json({ error: "Session not found or access denied" });
+        return res
+          .status(404)
+          .json({ error: "Session not found or access denied" });
       }
 
       const submission = await StudentSubmissionModel.findOne({
@@ -790,49 +844,57 @@ submissionRouter.get(
       }
 
       const templateLean = await ExamTemplateModel.findById(
-        session.examTemplateId._id ?? session.examTemplateId
+        session.examTemplateId._id ?? session.examTemplateId,
       ).lean();
 
       // Use examCodeNumber stored directly on the submission (more reliable than re-querying StudentExamCodeModel)
       const studentExamCodeNumber = submission.examCodeNumber;
-      const examCodeLean = studentExamCodeNumber != null
-        ? templateLean?.examCodes?.find(
-            (c) => Number(c.codeNumber) === Number(studentExamCodeNumber)
-          )
-        : null;
-
+      const examCodeLean =
+        studentExamCodeNumber != null
+          ? templateLean?.examCodes?.find(
+              (c) => Number(c.codeNumber) === Number(studentExamCodeNumber),
+            )
+          : null;
 
       // Enrich each questionSubmission with testcase details
       const submittedQuestionNumbers = new Set(
-        submission.submissions.map((s) => Number(s.questionNumber))
+        submission.submissions.map((s) => Number(s.questionNumber)),
       );
 
       const enrichedSubmissions = submission.submissions.map((questionSub) => {
         const question = examCodeLean?.questions?.find(
-          (q) => Number(q.questionNumber) === Number(questionSub.questionNumber)
+          (q) =>
+            Number(q.questionNumber) === Number(questionSub.questionNumber),
         );
 
         if (!question) {
           console.warn(
             `[detail] question not found: questionNumber=${questionSub.questionNumber}` +
-            ` available=[${examCodeLean?.questions?.map((q) => q.questionNumber).join(",")}]`
+              ` available=[${examCodeLean?.questions?.map((q) => q.questionNumber).join(",")}]`,
           );
         }
 
-        const enrichedTestResults = (questionSub.testResults || []).map((result) => {
-          // Use result.testCaseId (the actual index into testCases[]) not the array map index
-          const tcIdx = typeof result.testCaseId === "number" ? result.testCaseId : Number(result.testCaseId) || 0;
-          const tc = question?.testCases?.[tcIdx];
-          if (!tc && question) {
-            console.warn(`[detail] testCase[${tcIdx}] not found, length=${question.testCases?.length}`);
-          }
-          return {
-            ...result.toObject(),
-            input: tc?.input ?? null,
-            expectedOutput: tc?.expectedOutput ?? null,
-            hasGrader: !!(tc?.testFile?.name && tc?.testFile?.content),
-          };
-        });
+        const enrichedTestResults = (questionSub.testResults || []).map(
+          (result) => {
+            // Use result.testCaseId (the actual index into testCases[]) not the array map index
+            const tcIdx =
+              typeof result.testCaseId === "number"
+                ? result.testCaseId
+                : Number(result.testCaseId) || 0;
+            const tc = question?.testCases?.[tcIdx];
+            if (!tc && question) {
+              console.warn(
+                `[detail] testCase[${tcIdx}] not found, length=${question.testCases?.length}`,
+              );
+            }
+            return {
+              ...result.toObject(),
+              input: tc?.input ?? null,
+              expectedOutput: tc?.expectedOutput ?? null,
+              hasGrader: !!(tc?.testFile?.name && tc?.testFile?.content),
+            };
+          },
+        );
 
         return {
           ...questionSub.toObject(),
@@ -845,8 +907,11 @@ submissionRouter.get(
       // Only include non-hidden test cases so FE can show "0/N test cases"
       if (examCodeLean?.questions) {
         for (const question of examCodeLean.questions) {
-          if (submittedQuestionNumbers.has(Number(question.questionNumber))) continue;
-          const visibleTcs = (question.testCases || []).filter((tc) => !tc.isHidden);
+          if (submittedQuestionNumbers.has(Number(question.questionNumber)))
+            continue;
+          const visibleTcs = (question.testCases || []).filter(
+            (tc) => !tc.isHidden,
+          );
           enrichedSubmissions.push({
             questionNumber: question.questionNumber,
             questionTitle: question.title ?? null,
@@ -885,7 +950,7 @@ submissionRouter.get(
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 // Get student's submission (Lecturer only)
@@ -920,36 +985,41 @@ submissionRouter.get(
 );
 
 // Run code freely without saving/grading – returns stdout/stderr immediately (Student only)
-submissionRouter.post("/run-console", isAuthenticated, runConsoleLimiter, async (req, res) => {
-  try {
-    const user = await resolveCurrentUser(req);
-    if (!user || user.role !== "student") {
-      return res.status(403).json({ error: "Student only endpoint" });
+submissionRouter.post(
+  "/run-console",
+  isAuthenticated,
+  runConsoleLimiter,
+  async (req, res) => {
+    try {
+      const user = await resolveCurrentUser(req);
+      if (!user || user.role !== "student") {
+        return res.status(403).json({ error: "Student only endpoint" });
+      }
+
+      const { files, mainFile, language } = req.body;
+      if (!files || !mainFile || !language) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Run with a single dummy testcase (empty input, no expected output check)
+      const { results, status } = await executeCodeLocally(
+        { code: files[0]?.content || "", language, files, mainFile },
+        [{ input: "", expectedOutput: "__console__", _id: "console" }],
+      );
+
+      const r = results[0];
+      res.json({
+        stdout: r?.output ?? "",
+        stderr: r?.error ?? "",
+        executionTime: r?.executionTime ?? 0,
+        status,
+      });
+    } catch (err) {
+      console.error("[run-console] error:", err);
+      res.status(500).json({ error: err.message });
     }
-
-    const { files, mainFile, language } = req.body;
-    if (!files || !mainFile || !language) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    // Run with a single dummy testcase (empty input, no expected output check)
-    const { results, status } = await executeCodeLocally(
-      { code: files[0]?.content || "", language, files, mainFile },
-      [{ input: "", expectedOutput: "__console__", _id: "console" }],
-    );
-
-    const r = results[0];
-    res.json({
-      stdout: r?.output ?? "",
-      stderr: r?.error ?? "",
-      executionTime: r?.executionTime ?? 0,
-      status,
-    });
-  } catch (err) {
-    console.error("[run-console] error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
+  },
+);
 
 // Auto-save code without triggering execution (Student only)
 submissionRouter.post("/autosave", isAuthenticated, async (req, res) => {
@@ -1158,7 +1228,12 @@ submissionRouter.post(
   async (req, res) => {
     try {
       const { type } = req.body;
-      const ALLOWED = ["copy_attempt", "paste_attempt", "fullscreen_exit", "right_click"];
+      const ALLOWED = [
+        "copy_attempt",
+        "paste_attempt",
+        "fullscreen_exit",
+        "right_click",
+      ];
       if (!ALLOWED.includes(type)) {
         return res.status(400).json({ error: "Invalid event type" });
       }
@@ -1186,7 +1261,7 @@ submissionRouter.post(
 const REGRADE_SSE_MAX_KEYS = 500;
 // ─── REGRADE: SSE infrastructure ─────────────────────────────────────────────
 // Stores SSE response objects keyed by sessionId
-const regradeSSEMap = new Map();    // sessionId → Set<res>
+const regradeSSEMap = new Map(); // sessionId → Set<res>
 const regradeResultCache = new BoundedCache({ maxEntries: 500, ttlMs: 60_000 }); // sessionId → final event (kept 60s)
 
 function emitRegradeEvent(sessionId, data) {
@@ -1201,12 +1276,16 @@ function emitRegradeEvent(sessionId, data) {
   if (!clients) return;
   const payload = `data: ${JSON.stringify(data)}\n\n`;
   for (const res of clients) {
-    try { res.write(payload); } catch (_) {}
+    try {
+      res.write(payload);
+    } catch (_) {}
   }
   // On "done" or "error", close all clients
   if (data.type === "done" || data.type === "error") {
     for (const res of clients) {
-      try { res.end(); } catch (_) {}
+      try {
+        res.end();
+      } catch (_) {}
     }
     regradeSSEMap.delete(key);
   }
@@ -1241,7 +1320,11 @@ submissionRouter.get(
           // Drop the oldest entry to make room
           const oldest = regradeSSEMap.keys().next().value;
           const oldestSet = regradeSSEMap.get(oldest);
-          if (oldestSet) for (const r of oldestSet) try { r.end(); } catch (_) {}
+          if (oldestSet)
+            for (const r of oldestSet)
+              try {
+                r.end();
+              } catch (_) {}
           regradeSSEMap.delete(oldest);
         }
         regradeSSEMap.set(sessionId, new Set());
@@ -1258,7 +1341,9 @@ submissionRouter.get(
 
       // Safety timeout: 10 minutes
       const guard = setTimeout(() => {
-        try { res.end(); } catch (_) {}
+        try {
+          res.end();
+        } catch (_) {}
         const clients = regradeSSEMap.get(sessionId);
         if (clients) clients.delete(res);
       }, 600_000);
@@ -1266,7 +1351,7 @@ submissionRouter.get(
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 // ─── Helper: grade a single question submission ───────────────────────────────
@@ -1329,7 +1414,7 @@ async function gradeQuestion(questionSub, question, templateLean) {
         mainFile: studentMainFile,
         ...(hasGrader ? { testRunFile: tc.testFile.name } : {}),
       },
-      [tc]
+      [tc],
     );
 
     if (status === "compile_error") {
@@ -1374,7 +1459,7 @@ async function gradeQuestion(questionSub, question, templateLean) {
         : 0;
 
     const hasRuntimeError = allResults.some(
-      (r) => r.status === "error" && r.errorMessage?.length > 0
+      (r) => r.status === "error" && r.errorMessage?.length > 0,
     );
     if (allPassed === question.testCases.length) {
       questionSub.status = "accepted";
@@ -1402,7 +1487,9 @@ submissionRouter.post(
       }).populate("examTemplateId");
 
       if (!session) {
-        return res.status(404).json({ error: "Session not found or access denied" });
+        return res
+          .status(404)
+          .json({ error: "Session not found or access denied" });
       }
 
       // submittedOnly=true (default) → only grade students who clicked Submit
@@ -1411,11 +1498,15 @@ submissionRouter.post(
       const submissionQuery = { examSessionId: req.params.sessionId };
       if (submittedOnly) submissionQuery.isSubmitted = true;
 
-      const submissions = await StudentSubmissionModel.find(submissionQuery)
-        .populate("studentId", "name email");
+      const submissions = await StudentSubmissionModel.find(
+        submissionQuery,
+      ).populate("studentId", "name email");
 
       if (submissions.length === 0) {
-        return res.json({ message: "No submissions found to regrade", total: 0 });
+        return res.json({
+          message: "No submissions found to regrade",
+          total: 0,
+        });
       }
 
       // Respond immediately so client can open SSE connection
@@ -1429,7 +1520,7 @@ submissionRouter.post(
         try {
           // Fetch template once with .lean() to get full testFile.content
           const templateLean = await ExamTemplateModel.findById(
-            session.examTemplateId._id ?? session.examTemplateId
+            session.examTemplateId._id ?? session.examTemplateId,
           ).lean();
 
           // Sequential grading: chấm từng sinh viên một — tránh nhiều javac chạy đồng thời
@@ -1444,7 +1535,7 @@ submissionRouter.post(
 
               if (!studentCode) {
                 console.warn(
-                  `[regrade] student ${submission.studentId.name} has no exam code — skipping`
+                  `[regrade] student ${submission.studentId.name} has no exam code — skipping`,
                 );
                 const count = ++graded;
                 emitRegradeEvent(sessionId, {
@@ -1459,18 +1550,20 @@ submissionRouter.post(
               }
 
               const examCodeLean = templateLean?.examCodes?.find(
-                (c) => c.codeNumber === studentCode.examCodeNumber
+                (c) => c.codeNumber === studentCode.examCodeNumber,
               );
 
               // Pre-populate missing questions as "not_submitted" before grading
               // so students who never touched a question still appear with 0/N test cases
               if (examCodeLean?.questions) {
                 const submittedQNums = new Set(
-                  submission.submissions.map((s) => s.questionNumber)
+                  submission.submissions.map((s) => s.questionNumber),
                 );
                 for (const templateQ of examCodeLean.questions) {
                   if (submittedQNums.has(templateQ.questionNumber)) continue;
-                  const visibleTcs = (templateQ.testCases || []).filter((tc) => !tc.isHidden);
+                  const visibleTcs = (templateQ.testCases || []).filter(
+                    (tc) => !tc.isHidden,
+                  );
                   submission.submissions.push({
                     questionNumber: templateQ.questionNumber,
                     code: "",
@@ -1494,7 +1587,7 @@ submissionRouter.post(
               // Regrade each question in this submission
               for (const questionSub of submission.submissions) {
                 const question = examCodeLean?.questions?.find(
-                  (q) => q.questionNumber === questionSub.questionNumber
+                  (q) => q.questionNumber === questionSub.questionNumber,
                 );
 
                 // No template question or no testcases → reset to empty, skip execution
@@ -1510,10 +1603,11 @@ submissionRouter.post(
                 } catch (execErr) {
                   console.error(
                     `[regrade] exec error for ${submission.studentId.name} Q${questionSub.questionNumber}:`,
-                    execErr
+                    execErr,
                   );
                   questionSub.status = "runtime_error";
-                  questionSub.errorMessage = execErr?.message ?? String(execErr);
+                  questionSub.errorMessage =
+                    execErr?.message ?? String(execErr);
                   questionSub.testResults = question.testCases.map((_, i) => ({
                     testCaseId: i,
                     status: "error",
@@ -1526,26 +1620,40 @@ submissionRouter.post(
               }
 
               // Recalculate final score — average of question scores (thang 10)
-              const scoredSubs = submission.submissions.filter((s) => s.totalScore !== undefined);
-              const newFinalScore = scoredSubs.length > 0
-                ? Math.round((scoredSubs.reduce((sum, s) => sum + (s.totalScore || 0), 0) / scoredSubs.length) * 10) / 10
-                : 0;
+              const scoredSubs = submission.submissions.filter(
+                (s) => s.totalScore !== undefined,
+              );
+              const newFinalScore =
+                scoredSubs.length > 0
+                  ? Math.round(
+                      (scoredSubs.reduce(
+                        (sum, s) => sum + (s.totalScore || 0),
+                        0,
+                      ) /
+                        scoredSubs.length) *
+                        10,
+                    ) / 10
+                  : 0;
 
               try {
                 const submissionsData = submission.submissions.map((s) =>
-                  s.toObject ? s.toObject() : { ...s }
+                  s.toObject ? s.toObject() : { ...s },
                 );
-                await StudentSubmissionModel.findByIdAndUpdate(
-                  submission._id,
-                  { $set: { submissions: submissionsData, finalScore: newFinalScore } }
-                );
+                await StudentSubmissionModel.findByIdAndUpdate(submission._id, {
+                  $set: {
+                    submissions: submissionsData,
+                    finalScore: newFinalScore,
+                  },
+                });
                 submission.finalScore = newFinalScore;
               } catch (saveErr) {
                 console.error("[regrade] save error:", saveErr);
               }
 
               const count = ++graded;
-              console.log(`[regrade] ✓ ${submission.studentId.name} | session=${sessionId} | score=${newFinalScore.toFixed(1)}/10 [${count}/${submissions.length}]`);
+              console.log(
+                `[regrade] ✓ ${submission.studentId.name} | session=${sessionId} | score=${newFinalScore.toFixed(1)}/10 [${count}/${submissions.length}]`,
+              );
               emitRegradeEvent(sessionId, {
                 type: "progress",
                 graded: count,
@@ -1557,14 +1665,16 @@ submissionRouter.post(
                   questionNumber: s.questionNumber,
                   score: s.totalScore ?? 0,
                   status: s.status,
-                  passedCount: (s.testResults || []).filter((r) => r.status === "passed").length,
+                  passedCount: (s.testResults || []).filter(
+                    (r) => r.status === "passed",
+                  ).length,
                   totalTests: (s.testResults || []).length,
                 })),
               });
             } catch (studentErr) {
               console.error(
                 `[regrade] unexpected error for student ${submission.studentId?.name}:`,
-                studentErr
+                studentErr,
               );
               const count = ++graded;
               emitRegradeEvent(sessionId, {
@@ -1598,7 +1708,7 @@ submissionRouter.post(
       console.error("[regrade] route error:", error);
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 // ─── ACTIVITY LOG: Lecturer views student activity timeline ─────────────────
@@ -1615,14 +1725,15 @@ submissionRouter.get(
         createdBy: req.dbUser._id,
       });
       if (!session) {
-        return res.status(404).json({ error: "Session not found or access denied" });
+        return res
+          .status(404)
+          .json({ error: "Session not found or access denied" });
       }
 
-      const logs = await ActivityLogModel
-        .find({
-          examSessionId: req.params.sessionId,
-          userId: req.params.studentId,
-        })
+      const logs = await ActivityLogModel.find({
+        examSessionId: req.params.sessionId,
+        userId: req.params.studentId,
+      })
         .sort({ timestamp: 1 })
         .lean();
 
