@@ -26,7 +26,7 @@ const badgeVariants = cva(
           "bg-warning/15 text-warning",
         destructive:
           "bg-destructive/10 text-destructive",
-        info: "bg-accent/10 text-accent",
+        info: "bg-primary text-white",
       },
     },
     defaultVariants: {
