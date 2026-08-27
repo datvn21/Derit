@@ -387,7 +387,7 @@ function StudentDetailModal({
                 ) : (
                   <Download className="w-3.5 h-3.5" />
                 )}
-                {isDownloading ? "Đang tải…" : "Tải bài"}
+                {isDownloading ? "Downloading..." : "Download Submission"}
               </Button>
             )}
             <Button
@@ -583,6 +583,7 @@ export default function ExamSessionResults() {
   const [sortKey, setSortKey] = useState<SortKey>("pct");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [showOnlySubmitted, setShowOnlySubmitted] = useState(false);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
   const [detailModal, setDetailModal] = useState<{
     studentId: string;
@@ -774,6 +775,66 @@ export default function ExamSessionResults() {
   const session = sessionData?.data?.session;
   const rawSubmissions: any[] = subData?.data?.submissions || [];
 
+  const handleDownloadAllSubmissions = async () => {
+    if (!id || rawSubmissions.length === 0) {
+      toast.error("No submissions found for this session.");
+      return;
+    }
+
+    setIsDownloadingAll(true);
+    try {
+      const zip = new JSZip();
+      let hasAnyFile = false;
+
+      const safe = (value: string) =>
+        String(value || "").replace(/[^a-z0-9._-]/gi, "_");
+
+      for (const sub of rawSubmissions) {
+        const studentName = safe(sub?.studentId?.name || "unknown_student");
+        const studentEmail = safe(sub?.studentId?.email || "unknown_email");
+        const examCode = safe(sub?.examCodeNumber || "NA");
+        const studentFolder = `${studentName}_${studentEmail}_code${examCode}`;
+
+        const questions = sub?.submissions || [];
+        for (const q of questions) {
+          const qFiles: { name: string; content: string }[] = q?.files?.length
+            ? q.files
+            : q?.code
+              ? [{ name: q.mainFile || "Main.java", content: q.code }]
+              : [];
+
+          for (const f of qFiles) {
+            zip.file(
+              `${studentFolder}/Q${q.questionNumber}/${f.name}`,
+              f.content ?? "",
+            );
+            hasAnyFile = true;
+          }
+        }
+      }
+
+      if (!hasAnyFile) {
+        toast.error("No code files found to download.");
+        return;
+      }
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const sessionNameSafe = safe(session?.sessionName || id);
+      a.download = `all_submissions_${sessionNameSafe}_${Date.now()}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success("Downloaded all student submissions.");
+    } catch {
+      toast.error("Download all submissions failed.");
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  };
+
   const maxQuestions = useMemo(() => {
     let max = 0;
     for (const s of rawSubmissions) {
@@ -880,6 +941,21 @@ export default function ExamSessionResults() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadAllSubmissions}
+              disabled={isDownloadingAll || rawSubmissions.length === 0}
+              className="gap-1.5"
+              title="Download all students' code files as ZIP"
+            >
+              {isDownloadingAll ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              {isDownloadingAll ? "Downloading..." : "Download All Submissions"}
+            </Button>
             <Button
               variant="outline"
               size="sm"
