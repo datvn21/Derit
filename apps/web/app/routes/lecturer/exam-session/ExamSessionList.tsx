@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Badge } from "~/components/ui/badge";
+import { Card, CardContent } from "~/components/ui/card";
 import {
   Plus,
   Calendar,
@@ -73,8 +74,8 @@ function SessionCard({
   const statusVariant = statusVariantMap[session.status] ?? "default";
 
   return (
-    <div className="bg-card rounded-lg border border-border hover:border-foreground/20 transition-colors">
-      <div className="p-6">
+    <Card className="hover:border-foreground/20 transition-[border-color] duration-(--motion-fast) ease-(--motion-ease)">
+      <CardContent className="p-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
@@ -163,7 +164,7 @@ function SessionCard({
             Details
           </Button>
         </div>
-      </div>
+      </CardContent>
 
       {/* End Session Confirm Dialog */}
       <Dialog open={endDialogOpen} onOpenChange={setEndDialogOpen}>
@@ -210,7 +211,7 @@ function SessionCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Card>
   );
 }
 
@@ -274,7 +275,8 @@ export default function ExamSessionList() {
             <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
           </div>
         ) : sessions.length === 0 ? (
-          <div className="bg-card rounded-lg border border-border p-12 text-center">
+          <Card>
+            <CardContent className="p-12 text-center">
             <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">
               No sessions yet
@@ -288,7 +290,8 @@ export default function ExamSessionList() {
               <Plus className="w-4 h-4 mr-2" />
               Create Session
             </Button>
-          </div>
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-10">
             {ongoing.length > 0 && (

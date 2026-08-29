@@ -10,7 +10,7 @@
  *  - Test cases: input and expected output stacked, one per row,
  *    with the action bar in a dedicated row below.
  */
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -34,7 +34,6 @@ import {
   Code2,
   ChevronDown,
   AlertTriangle,
-  Eye,
 } from "lucide-react";
 import type { UseTemplateStateResult } from "./useTemplateState";
 import {
@@ -48,9 +47,11 @@ import { cn } from "~/lib/utils";
 export function QuestionsEditor({
   state,
   activeCodeIndex,
+  jumpTarget,
 }: {
   state: UseTemplateStateResult;
   activeCodeIndex: number;
+  jumpTarget?: string;
 }) {
   const { examCodes } = state;
   const code = examCodes[activeCodeIndex];
@@ -63,9 +64,6 @@ export function QuestionsEditor({
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <h3 className="text-sm font-medium text-foreground">Questions</h3>
-          <p className="text-xs text-muted-foreground">
-            {total} question{total === 1 ? "" : "s"} in this code
-          </p>
         </div>
         <Button
           variant="outline"
@@ -81,7 +79,9 @@ export function QuestionsEditor({
           <QuestionAccordion
             key={qi}
             index={qi + 1}
+            codeIndex={activeCodeIndex}
             question={q}
+            jumpTarget={jumpTarget}
             onTitleChange={(v) =>
               state.updateQuestion(activeCodeIndex, qi, "title", v)
             }
@@ -138,7 +138,9 @@ type SlotHandlers = ReturnType<typeof questionSlotProps>;
 
 function QuestionAccordion({
   index,
+  codeIndex,
   question,
+  jumpTarget,
   onTitleChange,
   onRemove,
   onAddTestCase,
@@ -150,7 +152,9 @@ function QuestionAccordion({
   onSetDefaultMain,
 }: {
   index: number;
+  codeIndex: number;
   question: import("./types").Question;
+  jumpTarget?: string;
   onTitleChange: (v: string) => void;
   onRemove: () => void;
 } & SlotHandlers) {
@@ -167,9 +171,21 @@ function QuestionAccordion({
   const hasFileInputs = question.starterFiles.some((f) => f.canDownload);
 
   const ready = !titleMissing && testCaseIssues === 0;
+  const questionId = `wizard-code-${codeIndex}-question-${index - 1}`;
+
+  useEffect(() => {
+    if (!jumpTarget?.startsWith(questionId)) return;
+    setOpen(true);
+    requestAnimationFrame(() => {
+      document
+        .getElementById(jumpTarget)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [jumpTarget, questionId]);
 
   return (
     <article
+      id={questionId}
       className={cn(
         "rounded-lg border bg-card overflow-hidden transition-colors",
         open ? "border-border" : "border-border hover:bg-muted/30",
@@ -270,6 +286,8 @@ function QuestionAccordion({
           />
 
           <TestCasesSection
+            codeIndex={codeIndex}
+            questionIndex={index - 1}
             testCases={question.testCases}
             onAdd={onAddTestCase}
             onRemove={onRemoveTestCase}
@@ -365,6 +383,7 @@ function StarterFilesEditor({
         <ul className="rounded-md border border-border divide-y divide-border bg-card overflow-hidden">
           {files.map((sf, i) => {
             const isMain = defaultMainFile === sf.name;
+            const entryDisabled = Boolean(defaultMainFile) && !isMain;
             const ext = sf.name.split(".").pop()?.toLowerCase() ?? "";
             return (
               <li
@@ -383,12 +402,12 @@ function StarterFilesEditor({
                 <button
                   type="button"
                   onClick={() => onPreview(sf)}
-                  className="truncate font-mono text-sm text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded cursor-pointer flex-1 min-w-0 text-left"
+                  className="min-w-0 flex-1 cursor-pointer truncate rounded text-left font-sans text-sm text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   title={sf.name}
                 >
                   {sf.name}
                 </button>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono shrink-0">
+                <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground font-sans">
                   {ext}
                 </span>
 
@@ -403,14 +422,17 @@ function StarterFilesEditor({
                     type="button"
                     variant={isMain ? "default" : "outline"}
                     size="sm"
+                    disabled={entryDisabled}
                     onClick={() => onSetDefault(sf.name)}
                     title={
                       isMain
                         ? "Default entry file (click to unset)"
-                        : "Set as default entry file"
+                        : entryDisabled
+                          ? `Only one entry file is allowed (${defaultMainFile})`
+                          : "Set as default entry file"
                     }
                     aria-pressed={isMain}
-                    className="h-7 px-2 text-xs"
+                    className="h-7 px-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Star
                       className="w-3 h-3 mr-1"
@@ -429,7 +451,11 @@ function StarterFilesEditor({
                         : "Click to allow students to download"
                     }
                     aria-pressed={sf.canDownload}
-                    className="h-7 px-2 text-xs"
+                    className={cn(
+                      "h-7 px-2 text-xs",
+                      !sf.canDownload &&
+                        "border-border/60 bg-muted/40 text-muted-foreground opacity-70 hover:bg-muted hover:text-foreground hover:opacity-100",
+                    )}
                   >
                     <Download className="w-3 h-3 mr-1" />
                     {sf.canDownload ? "Downloadable" : "Hidden"}
@@ -459,12 +485,16 @@ function StarterFilesEditor({
 /* -------------------------------------------------------------------------- */
 
 function TestCasesSection({
+  codeIndex,
+  questionIndex,
   testCases,
   onAdd,
   onRemove,
   onUpdate,
   onPreviewFile,
 }: {
+  codeIndex: number;
+  questionIndex: number;
   testCases: import("./types").TestCase[];
   onAdd: () => void;
   onRemove: (ti: number) => void;
@@ -492,6 +522,8 @@ function TestCasesSection({
           <TestCaseCard
             key={ti}
             index={ti}
+            codeIndex={codeIndex}
+            questionIndex={questionIndex}
             testCase={tc}
             total={testCases.length}
             onRemove={() => onRemove(ti)}
@@ -506,6 +538,8 @@ function TestCasesSection({
 
 function TestCaseCard({
   index,
+  codeIndex,
+  questionIndex,
   testCase,
   total,
   onRemove,
@@ -513,6 +547,8 @@ function TestCaseCard({
   onPreviewFile,
 }: {
   index: number;
+  codeIndex: number;
+  questionIndex: number;
   testCase: import("./types").TestCase;
   total: number;
   onRemove: () => void;
@@ -531,6 +567,7 @@ function TestCaseCard({
 
   return (
     <div
+      id={`wizard-code-${codeIndex}-question-${questionIndex}-testcase-${index}`}
       className={cn(
         "rounded-md border bg-card p-4 flex flex-col gap-4",
         missingRequired ? "border-warning/60" : "border-border",
@@ -851,7 +888,7 @@ function FileChip({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-mono self-start max-w-full",
+        "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-sans self-start max-w-full",
         tone === "warning"
           ? "bg-warning/5 border-warning/30"
           : "bg-accent border-accent-foreground/20",
@@ -903,9 +940,7 @@ function FilePreviewDialog({
         className="max-w-4xl max-h-[80vh] overflow-hidden"
       >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Eye className="w-4 h-4" /> {file?.name}
-          </DialogTitle>
+          <DialogTitle>{file?.name}</DialogTitle>
         </DialogHeader>
         <div className="overflow-auto bg-muted text-foreground text-sm p-4 rounded-md max-h-[60vh] font-mono">
           <pre className="whitespace-pre-wrap break-words">{file?.content}</pre>

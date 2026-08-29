@@ -7,13 +7,25 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { Badge } from "~/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import {
+  getAcademicYearOptions,
+  getCurrentAcademicYear,
+} from "~/lib/academic-year";
 
 export default function ClassroomCreate() {
   const navigate = useNavigate();
 
   const [classroomName, setClassroomName] = useState("");
+  const [academicYear, setAcademicYear] = useState(getCurrentAcademicYear);
   const [studentsRaw, setStudentsRaw] = useState("");
 
   const createMutation = useMutation({
@@ -38,7 +50,11 @@ export default function ClassroomCreate() {
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    createMutation.mutate({ classroomName: classroomName.trim(), students });
+    createMutation.mutate({
+      classroomName: classroomName.trim(),
+      academicYear: academicYear.trim() || getCurrentAcademicYear(),
+      students,
+    });
   };
 
   // parse student count for live preview
@@ -46,37 +62,39 @@ export default function ClassroomCreate() {
     .split("\n")
     .map((s) => s.trim())
     .filter((s) => s.length > 0).length;
+  const academicYearOptions = getAcademicYearOptions(academicYear);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div>
-        <div className="max-w-3xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+      <header className="border-y border-border/80 bg-card">
+        <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
+          <div className="flex min-h-11 items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-5">
               <Button
-                variant="ghost"
+                variant="outline"
                 onClick={() => navigate("/lecturer/classrooms")}
+                className="h-9 rounded-lg bg-card px-4 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
+                <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
-              <h1 className="text-2xl font-bold text-foreground">
+              <h1 className="truncate text-2xl font-semibold tracking-tight text-foreground">
                 Create Classroom
               </h1>
             </div>
             <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending}
+              className="h-10 shrink-0 rounded-lg px-5"
             >
-              {createMutation.isPending ? "Creating..." : "Create Classroom"}
+              {createMutation.isPending ? "Creating..." : "Save"}
             </Button>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-3xl mx-auto px-6 py-8">
-        <div className="bg-card rounded-md border border-border p-6 space-y-6">
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+        <div className="space-y-6 rounded-md border border-border bg-card p-5 sm:p-6">
           {/* Classroom Name */}
           <div>
             <Label
@@ -92,6 +110,28 @@ export default function ClassroomCreate() {
               placeholder="e.g., K21 OOP - Group A"
               className="mt-1"
             />
+          </div>
+
+          {/* Academic Year */}
+          <div>
+            <Label htmlFor="academicYear" className="mb-2 block">
+              Academic Year
+            </Label>
+            <Select value={academicYear} onValueChange={setAcademicYear}>
+              <SelectTrigger id="academicYear" className="mt-1 w-full">
+                <SelectValue placeholder="Select academic year" />
+              </SelectTrigger>
+              <SelectContent>
+                {academicYearOptions.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Defaults to {getCurrentAcademicYear()} for new classrooms.
+            </p>
           </div>
 
           {/* Student IDs */}
@@ -117,11 +157,6 @@ export default function ClassroomCreate() {
             <p className="text-xs text-muted-foreground mt-2">
               Enter one student ID per line (e.g.{" "}
               <code className="bg-muted px-1 py-0.5 rounded">521H0001</code>).
-              Each ID will be formatted as{" "}
-              <code className="bg-muted px-1 py-0.5 rounded">
-                521H0001@student.tdtu.edu.vn
-              </code>{" "}
-              when added to an exam whitelist.
             </p>
           </div>
         </div>

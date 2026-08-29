@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-08-29",
+    "macrostructure": "Workbench",
+    "theme": "modern-minimal",
+    "enrichment": "none",
+    "scope": "app",
+    "brief": "Unify Admin and Teacher management routes through shadcn Card, Table, Checkbox, Textarea primitives"
+  },
+  {
     "date": "2026-07-24",
     "macrostructure": "App Dashboard",
     "theme": "modern-minimal",

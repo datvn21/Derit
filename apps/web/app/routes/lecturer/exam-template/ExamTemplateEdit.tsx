@@ -13,6 +13,7 @@ import { PageLoading } from "~/components/ui/page-loading";
 import { useTemplateState } from "./_wizard/useTemplateState";
 import { WizardShell } from "./_wizard/WizardShell";
 import type { ExamCode, ExamType, Language } from "./_wizard/types";
+import { recordRecentItem } from "~/lib/recents";
 
 export default function ExamTemplateEdit() {
   const { id } = useParams();
@@ -35,6 +36,12 @@ export default function ExamTemplateEdit() {
       hasInitializedRef.current = true;
       const t = templateData.data.template;
 
+      recordRecentItem({
+        type: "Template",
+        name: t.templateName,
+        href: `/lecturer/exam-templates/${id}/edit`,
+      });
+
       state.hydrate({
         meta: {
           templateName: t.templateName,
@@ -46,9 +53,12 @@ export default function ExamTemplateEdit() {
           codeNumber: code.codeNumber,
           pdfUrl: code.pdfUrl,
           pdfFile: null,
-          questions: (code.questions ?? []).map((q: any) => ({
-            questionNumber: q.questionNumber,
-            title: q.title ?? "",
+          questions: (code.questions ?? []).map((q: any, qi: number) => ({
+            questionNumber: q.questionNumber ?? qi + 1,
+            title:
+              typeof q.title === "string" && q.title.trim()
+                ? q.title
+                : `Question ${q.questionNumber ?? qi + 1}`,
             testCases: (q.testCases ?? []).map((tc: any) => ({
               input: tc.input ?? "",
               expectedOutput: tc.expectedOutput ?? "",
@@ -91,7 +101,7 @@ export default function ExamTemplateEdit() {
   const submit = async (payload: Parameters<typeof examTemplateAPI.update>[1]) => {
     setIsSubmitting(true);
     try {
-      await updateMutation.mutateAsync(payload);
+      await updateMutation.mutateAsync({ ...payload, isPublished: true });
     } catch {
       // Error already toasted; reset submitting so user can retry.
       setIsSubmitting(false);

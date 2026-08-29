@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Hallmark · genre: modern-minimal · tone: utilitarian · anchor hue: blue · structural fingerprint: App Dashboard */
+
 /*
  * Derit design tokens — single source of truth.
  * Mirrors the locked system in `design.md`:
@@ -192,5 +194,22 @@ body {
   }
   .btn-press:active {
     transform: scale(0.98);
+  }
+}
+
+@layer base {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
+@layer components {
+  .settings-card {
+    transition: border-color var(--motion-fast) var(--motion-ease);
+  }
+
+  .settings-card:not(.settings-card-warning):hover {
+    border-color: color-mix(in oklch, var(--border) 70%, var(--primary));
   }
 }

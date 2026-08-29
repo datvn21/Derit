@@ -7,8 +7,21 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { Badge } from "~/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { recordRecentItem } from "~/lib/recents";
+import {
+  getAcademicYearOptions,
+  getClassroomAcademicYear,
+  getCurrentAcademicYear,
+} from "~/lib/academic-year";
 
 export default function ClassroomEdit() {
   const navigate = useNavigate();
@@ -16,6 +29,7 @@ export default function ClassroomEdit() {
   const queryClient = useQueryClient();
 
   const [classroomName, setClassroomName] = useState("");
+  const [academicYear, setAcademicYear] = useState(getCurrentAcademicYear);
   const [studentsRaw, setStudentsRaw] = useState("");
 
   const { data, isLoading } = useQuery({
@@ -28,7 +42,13 @@ export default function ClassroomEdit() {
   useEffect(() => {
     if (data?.data?.classroom) {
       const classroom = data.data.classroom;
+      recordRecentItem({
+        type: "Classroom",
+        name: classroom.classroomName,
+        href: `/lecturer/classrooms/${id}/edit`,
+      });
       setClassroomName(classroom.classroomName);
+      setAcademicYear(getClassroomAcademicYear(classroom));
       setStudentsRaw((classroom.students || []).join("\n"));
     }
   }, [data]);
@@ -56,13 +76,18 @@ export default function ClassroomEdit() {
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    updateMutation.mutate({ classroomName: classroomName.trim(), students });
+    updateMutation.mutate({
+      classroomName: classroomName.trim(),
+      academicYear: academicYear.trim() || getCurrentAcademicYear(),
+      students,
+    });
   };
 
   const studentCount = studentsRaw
     .split("\n")
     .map((s) => s.trim())
     .filter((s) => s.length > 0).length;
+  const academicYearOptions = getAcademicYearOptions(academicYear);
 
   if (isLoading) {
     return (
@@ -74,34 +99,31 @@ export default function ClassroomEdit() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div>
-        <div className="max-w-3xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+      <header className="border-b border-border/80 bg-card/95">
+        <div className="mx-auto max-w-3xl px-4 py-3 sm:px-6">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 onClick={() => navigate("/lecturer/classrooms")}
+                className="h-8 rounded-md border border-border bg-muted/70 px-3 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
-              <h1 className="text-2xl font-bold text-foreground">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground">
                 Edit Classroom
               </h1>
             </div>
-            <Button
-              onClick={handleSubmit}
-              disabled={updateMutation.isPending}
-            >
+            <Button onClick={handleSubmit} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-3xl mx-auto px-6 py-8">
-        <div className="bg-card rounded-md border border-border p-6 space-y-6">
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+        <div className="space-y-6 rounded-md border border-border bg-card p-5 sm:p-6">
           {/* Classroom Name */}
           <div>
             <Label
@@ -117,6 +139,28 @@ export default function ClassroomEdit() {
               placeholder="e.g., K21 OOP - Group A"
               className="mt-1"
             />
+          </div>
+
+          {/* Academic Year */}
+          <div>
+            <Label htmlFor="academicYear" className="mb-2 block">
+              Academic Year
+            </Label>
+            <Select value={academicYear} onValueChange={setAcademicYear}>
+              <SelectTrigger id="academicYear" className="mt-1 w-full">
+                <SelectValue placeholder="Select academic year" />
+              </SelectTrigger>
+              <SelectContent>
+                {academicYearOptions.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Controls which academic-year filter this classroom appears under.
+            </p>
           </div>
 
           {/* Student IDs */}
@@ -139,12 +183,7 @@ export default function ClassroomEdit() {
             />
             <p className="text-xs text-muted-foreground mt-2">
               Enter one student ID per line (e.g.{" "}
-              <code className="bg-muted px-1 py-0.5 rounded">521H0001</code>
-              ). Each ID will be formatted as{" "}
-              <code className="bg-muted px-1 py-0.5 rounded">
-                521H0001@student.tdtu.edu.vn
-              </code>{" "}
-              when added to an exam whitelist.
+              <code className="bg-muted px-1 py-0.5 rounded">521H0001</code>).
             </p>
           </div>
         </div>

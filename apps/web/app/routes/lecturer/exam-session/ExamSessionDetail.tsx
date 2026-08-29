@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatToLocalDateTime, stripUniversityDomain, STATUS_VARIANT_MAP, withUniversityDomain } from "./Detail/helpers";
+import { recordRecentItem } from "~/lib/recents";
 
 export default function ExamSessionDetail() {
   const { id } = useParams();
@@ -56,6 +57,12 @@ export default function ExamSessionDetail() {
   useEffect(() => {
     if (sessionData?.data?.session) {
       const session = sessionData.data.session;
+
+      recordRecentItem({
+        type: "Session",
+        name: session.sessionName,
+        href: `/lecturer/exam-sessions/${id}`,
+      });
 
       setSessionName(session.sessionName);
       setStartTime(formatToLocalDateTime(session.startTime));

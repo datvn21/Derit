@@ -9,7 +9,7 @@
 export interface StarterFile {
   name: string;
   content: string;
-  canDownload?: boolean;
+  canDownload: boolean;
 }
 
 export interface TestCase {

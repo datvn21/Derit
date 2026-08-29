@@ -1,8 +1,31 @@
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4
+ * genre: modern-minimal · macrostructure: App Dashboard · design-system: design.md · designed-as-app
+ */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { classroomAPI } from "~/lib/api";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "~/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import {
   Plus,
   Trash2,
@@ -11,8 +34,7 @@ import {
   Calendar,
   Search,
   Loader2,
-  LayoutGrid,
-  List as ListIcon,
+  MoreHorizontal,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,23 +49,8 @@ import {
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
-
-type ViewMode = "grid" | "list";
-type SizeFilter = "all" | "small" | "medium" | "large";
-
-const SIZE_THRESHOLDS = {
-  small: { max: 20, label: "Small (≤20)" },
-  medium: { min: 21, max: 50, label: "Medium (21-50)" },
-  large: { min: 51, label: "Large (>50)" },
-} as const;
-
-function matchesSize(count: number, size: SizeFilter): boolean {
-  if (size === "all") return true;
-  if (size === "small") return count <= SIZE_THRESHOLDS.small.max;
-  if (size === "medium")
-    return count >= SIZE_THRESHOLDS.medium.min && count <= SIZE_THRESHOLDS.medium.max;
-  return count >= SIZE_THRESHOLDS.large.min;
-}
+import { getClassroomAcademicYear } from "~/lib/academic-year";
+import { ViewToggle, type ViewMode } from "~/components/ui/view-toggle";
 
 export default function ClassroomList() {
   const navigate = useNavigate();
@@ -84,24 +91,38 @@ export default function ClassroomList() {
 
   const classrooms = data?.data?.classrooms || [];
   const [query, setQuery] = useState("");
-  const [sizeFilter, setSizeFilter] = useState<SizeFilter | null>(null);
+  const [academicYearFilter, setAcademicYearFilter] = useState<string | null>(
+    null,
+  );
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+  const academicYears = useMemo(() => {
+    return Array.from(
+      new Set(
+        classrooms.map((classroom: any) => getClassroomAcademicYear(classroom)),
+      ),
+    ).sort((a, b) => Number(b) - Number(a));
+  }, [classrooms]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return classrooms.filter((c: any) => {
-      const studentCount = c.students?.length || 0;
       if (q && !c.classroomName.toLowerCase().includes(q)) return false;
-      if (sizeFilter && !matchesSize(studentCount, sizeFilter)) return false;
+      if (
+        academicYearFilter &&
+        getClassroomAcademicYear(c) !== academicYearFilter
+      ) {
+        return false;
+      }
       return true;
     });
-  }, [classrooms, query, sizeFilter]);
+  }, [classrooms, query, academicYearFilter]);
 
-  const hasActiveFilter = !!query || !!sizeFilter;
+  const hasActiveFilter = !!query || !!academicYearFilter;
 
   const clearFilters = () => {
     setQuery("");
-    setSizeFilter(null);
+    setAcademicYearFilter(null);
   };
 
   if (isLoading) {
@@ -117,9 +138,9 @@ export default function ClassroomList() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Page header — title + create action only */}
-      <div className="max-w-7xl mx-auto px-6 pt-6">
-        <div className="flex items-center justify-between gap-4">
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
+        {/* Page header — title + create action only */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">
               Classrooms
@@ -129,59 +150,28 @@ export default function ClassroomList() {
               {hasActiveFilter && ` · ${filtered.length} shown`}
             </p>
           </div>
-          <Button onClick={() => navigate("/lecturer/classrooms/create")}>
+          <Button
+            onClick={() => navigate("/lecturer/classrooms/create")}
+            className="w-full sm:w-auto"
+          >
             <Plus className="w-4 h-4 mr-2" />
             Create Classroom
           </Button>
         </div>
-      </div>
 
-      {/* Filter + search bar (below header) */}
-      <div className="max-w-7xl mx-auto px-6 pt-4">
-        <div className="bg-card border border-border rounded-lg p-3 flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              <Input
-                type="text"
-                placeholder="Search classrooms by name…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="pl-8"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  aria-label="Clear search"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-            <ViewToggle value={viewMode} onChange={setViewMode} />
-          </div>
+        <ClassroomToolbar
+          query={query}
+          onQueryChange={setQuery}
+          academicYears={academicYears}
+          academicYearFilter={academicYearFilter}
+          onAcademicYearFilterChange={setAcademicYearFilter}
+        />
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <SizeFilterPills value={sizeFilter} onChange={setSizeFilter} />
-            {hasActiveFilter && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="ml-auto text-muted-foreground"
-              >
-                <X className="w-3.5 h-3.5 mr-1" />
-                Clear all
-              </Button>
-            )}
-          </div>
+        <div className="flex justify-start">
+          <ViewToggle value={viewMode} onChange={setViewMode} />
         </div>
-      </div>
 
-      {/* Results */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* Results */}
         {filtered.length === 0 ? (
           <EmptyState
             query={query}
@@ -190,7 +180,7 @@ export default function ClassroomList() {
             onCreate={() => navigate("/lecturer/classrooms/create")}
           />
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((classroom: any) => (
               <ClassroomCard
                 key={classroom._id}
@@ -205,20 +195,34 @@ export default function ClassroomList() {
             ))}
           </div>
         ) : (
-          <div className="bg-card border border-border rounded-lg overflow-hidden divide-y divide-border">
-            {filtered.map((classroom: any) => (
-              <ClassroomRow
-                key={classroom._id}
-                classroom={classroom}
-                onEdit={() =>
-                  navigate(`/lecturer/classrooms/${classroom._id}/edit`)
-                }
-                onDelete={() =>
-                  handleOpenDelete(classroom._id, classroom.classroomName)
-                }
-              />
-            ))}
-          </div>
+          <Card className="overflow-hidden shadow-none">
+            <Table>
+              <TableHeader className="hidden md:table-header-group">
+                <TableRow>
+                  <TableHead>Classroom</TableHead>
+                  <TableHead className="w-32">Year</TableHead>
+                  <TableHead className="w-32">Students</TableHead>
+                  <TableHead className="w-36">Created</TableHead>
+                  <TableHead className="w-48">Preview</TableHead>
+                  <TableHead className="w-28 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((classroom: any) => (
+                  <ClassroomListRow
+                    key={classroom._id}
+                    classroom={classroom}
+                    onEdit={() =>
+                      navigate(`/lecturer/classrooms/${classroom._id}/edit`)
+                    }
+                    onDelete={() =>
+                      handleOpenDelete(classroom._id, classroom.classroomName)
+                    }
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         )}
       </div>
 
@@ -270,28 +274,82 @@ export default function ClassroomList() {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                              Filter pills                                  */
+/*                              Classroom toolbar                             */
 /* -------------------------------------------------------------------------- */
 
-function SizeFilterPills({
+function ClassroomToolbar({
+  query,
+  onQueryChange,
+  academicYears,
+  academicYearFilter,
+  onAcademicYearFilterChange,
+}: {
+  query: string;
+  onQueryChange: (value: string) => void;
+  academicYears: string[];
+  academicYearFilter: string | null;
+  onAcademicYearFilterChange: (value: string | null) => void;
+}) {
+  return (
+    <Card className="shadow-none">
+      <CardContent className="p-2">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Search classrooms by name…"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              className="h-9 pl-9 pr-9"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => onQueryChange("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex min-w-0 items-center gap-2">
+            <YearFilterPills
+              options={academicYears}
+              value={academicYearFilter}
+              onChange={onAcademicYearFilterChange}
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              Academic year filter                          */
+/* -------------------------------------------------------------------------- */
+
+function YearFilterPills({
+  options,
   value,
   onChange,
 }: {
-  value: SizeFilter | null;
-  onChange: (v: SizeFilter | null) => void;
+  options: string[];
+  value: string | null;
+  onChange: (value: string | null) => void;
 }) {
-  const options: SizeFilter[] = ["small", "medium", "large"];
   return (
-    <div className="inline-flex items-center gap-1.5">
-      <span className="text-xs text-muted-foreground font-medium tracking-wider mr-1">
-        Size
-      </span>
-      <div className="inline-flex items-center gap-1 bg-muted rounded-md p-0.5">
+    <div className="inline-flex shrink-0 items-center gap-1.5">
+      <span className="text-xs font-medium text-muted-foreground">Year</span>
+      <div className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
         <button
           type="button"
           onClick={() => onChange(null)}
           className={cn(
-            "h-6 px-2 rounded text-xs font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "h-8 rounded-md px-4 text-xs font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             value === null
               ? "bg-primary text-white shadow-sm"
               : "text-muted-foreground hover:text-foreground",
@@ -299,75 +357,22 @@ function SizeFilterPills({
         >
           All
         </button>
-        {options.map((opt) => (
+        {options.map((year) => (
           <button
-            key={opt}
+            key={year}
             type="button"
-            onClick={() => onChange(value === opt ? null : opt)}
+            onClick={() => onChange(value === year ? null : year)}
             className={cn(
-              "h-6 px-2 rounded text-xs font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              value === opt
+              "h-8 rounded-md px-4 text-xs font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              value === year
                 ? "bg-primary text-white shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {SIZE_THRESHOLDS[opt].label}
+            {year}
           </button>
         ))}
       </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                View toggle                                 */
-/* -------------------------------------------------------------------------- */
-
-function ViewToggle({
-  value,
-  onChange,
-}: {
-  value: ViewMode;
-  onChange: (v: ViewMode) => void;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="View mode"
-      className="inline-flex items-center bg-muted/50 rounded-md p-0.5"
-    >
-      <button
-        type="button"
-        role="tab"
-        aria-selected={value === "grid"}
-        onClick={() => onChange("grid")}
-        title="Grid view"
-        aria-label="Grid view"
-        className={cn(
-          "h-7 w-7 inline-flex items-center justify-center rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          value === "grid"
-            ? "bg-card text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground",
-        )}
-      >
-        <LayoutGrid className="w-3.5 h-3.5" />
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={value === "list"}
-        onClick={() => onChange("list")}
-        title="List view"
-        aria-label="List view"
-        className={cn(
-          "h-7 w-7 inline-flex items-center justify-center rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          value === "list"
-            ? "bg-card text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground",
-        )}
-      >
-        <ListIcon className="w-3.5 h-3.5" />
-      </button>
     </div>
   );
 }
@@ -386,39 +391,34 @@ function ClassroomCard({
   onDelete: () => void;
 }) {
   const studentCount = classroom.students?.length || 0;
+  const academicYear = getClassroomAcademicYear(classroom);
   return (
-    <div className="bg-card rounded-lg border border-border hover:border-foreground/20 transition-colors">
-      <div className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground mb-1 truncate">
-              {classroom.classroomName}
-            </h3>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="info">{studentCount} students</Badge>
-            </div>
+    <Card className="group shadow-none transition-colors hover:border-foreground/20">
+      <CardHeader className="flex-row items-start justify-between gap-3 p-5 pb-3">
+        <div className="min-w-0 space-y-2">
+          <h3 className="truncate font-semibold leading-tight text-foreground">
+            {classroom.classroomName}
+          </h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="default">
+              {studentCount} student{studentCount === 1 ? "" : "s"}
+            </Badge>
+            <Badge variant="info">{academicYear}</Badge>
           </div>
         </div>
+        <ClassroomActions onDelete={onDelete} />
+      </CardHeader>
 
-        <div className="space-y-2 mb-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Users className="w-4 h-4" />
-            <span>
-              {studentCount} student{studentCount === 1 ? "" : "s"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="w-4 h-4" />
-            <span>
-              Created{" "}
-              {new Date(classroom.createdAt).toLocaleDateString("vi-VN")}
-            </span>
-          </div>
+      <CardContent className="space-y-3 p-5 pt-0">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Calendar className="h-4 w-4" />
+          <span>
+            Created {new Date(classroom.createdAt).toLocaleDateString("vi-VN")}
+          </span>
         </div>
 
         {studentCount > 0 && (
-          <div className="mb-4 p-3 bg-muted rounded-lg border border-border">
+          <div className="rounded-md border border-border bg-muted/60 px-3 py-2">
             <p className="text-xs text-foreground font-mono leading-relaxed truncate">
               {classroom.students.slice(0, 3).join(", ")}
               {studentCount > 3 && (
@@ -430,38 +430,28 @@ function ClassroomCard({
             </p>
           </div>
         )}
+      </CardContent>
 
-        <div className="flex items-center gap-2 pt-4 border-t border-border">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onEdit}
-            className="flex-1"
-          >
-            <Edit className="w-3 h-3 mr-1" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onDelete}
-            className="text-destructive hover:text-destructive"
-            title="Delete classroom"
-            aria-label="Delete classroom"
-          >
-            <Trash2 className="w-3 h-3" />
-          </Button>
-        </div>
-      </div>
-    </div>
+      <CardFooter className="border-t border-border p-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onEdit}
+          className="w-full justify-center"
+        >
+          <Edit className="w-3.5 h-3.5 mr-1" />
+          Edit
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/*                                List row                                    */
+/*                                List table                                  */
 /* -------------------------------------------------------------------------- */
 
-function ClassroomRow({
+function ClassroomListRow({
   classroom,
   onEdit,
   onDelete,
@@ -471,52 +461,81 @@ function ClassroomRow({
   onDelete: () => void;
 }) {
   const studentCount = classroom.students?.length || 0;
-  const initials = getInitials(classroom.classroomName);
+  const academicYear = getClassroomAcademicYear(classroom);
+  const createdAt = new Date(classroom.createdAt).toLocaleDateString("vi-VN");
+  const preview = classroom.students?.slice(0, 3).join(", ") || "—";
+
   return (
-    <div className="flex items-center gap-4 px-4 py-3 hover:bg-muted/30 transition-colors">
-      <div className="w-9 h-9 rounded-md bg-primary/10 text-primary flex items-center justify-center font-mono text-sm font-semibold shrink-0">
-        {initials}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-foreground truncate">
-          {classroom.classroomName}
-        </p>
-        <p className="text-xs text-muted-foreground truncate">
-          {studentCount} student{studentCount === 1 ? "" : "s"} · Created{" "}
-          {new Date(classroom.createdAt).toLocaleDateString("vi-VN")}
-        </p>
-      </div>
-
-      <div className="hidden sm:flex items-center gap-2 shrink-0">
-        <Badge variant="info">{studentCount} students</Badge>
-      </div>
-
-      <div className="flex items-center gap-1 shrink-0">
-        <Button variant="outline" size="sm" onClick={onEdit} className="h-8">
-          <Edit className="w-3 h-3 mr-1" />
-          Edit
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onDelete}
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-          title="Delete"
-          aria-label="Delete classroom"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </Button>
-      </div>
-    </div>
+    <TableRow>
+      <TableCell className="min-w-[260px]">
+        <div className="min-w-0">
+          <p className="truncate font-medium text-foreground">
+            {classroom.classroomName}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground md:hidden">
+            <span>
+              {studentCount} student{studentCount === 1 ? "" : "s"}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>AY {academicYear}</span>
+            <span aria-hidden="true">·</span>
+            <span>Created {createdAt}</span>
+          </div>
+          <p className="mt-2 truncate text-xs font-mono text-muted-foreground md:hidden">
+            {preview}
+            {studentCount > 3 && ` +${studentCount - 3} more`}
+          </p>
+        </div>
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        <Badge variant="info">{academicYear}</Badge>
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        <Badge variant="default">
+          {studentCount} student{studentCount === 1 ? "" : "s"}
+        </Badge>
+      </TableCell>
+      <TableCell className="hidden text-muted-foreground md:table-cell">
+        {createdAt}
+      </TableCell>
+      <TableCell className="hidden max-w-48 truncate font-mono text-xs text-muted-foreground md:table-cell">
+        {preview}
+        {studentCount > 3 && ` +${studentCount - 3} more`}
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="inline-flex items-center justify-end gap-1">
+          <Button variant="outline" size="sm" onClick={onEdit} className="h-8">
+            <Edit className="w-3 h-3 mr-1" />
+            Edit
+          </Button>
+          <ClassroomActions onDelete={onDelete} />
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }
 
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
+function ClassroomActions({ onDelete }: { onDelete: () => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-foreground"
+          aria-label="Classroom actions"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem onClick={onDelete} variant="destructive">
+          <Trash2 className="h-4 w-4" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 /* -------------------------------------------------------------------------- */
@@ -536,36 +555,40 @@ function EmptyState({
 }) {
   if (hasFilter) {
     return (
-      <div className="bg-card border border-border rounded-lg p-12 text-center">
-        <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-        <h3 className="text-lg font-medium text-foreground mb-1">
-          No matching classrooms
-        </h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          {query
-            ? `No classrooms match "${query}".`
-            : "No classrooms match the current filters."}
-        </p>
-        <Button variant="outline" onClick={onClear}>
-          <X className="w-3.5 h-3.5 mr-1" />
-          Clear filters
-        </Button>
-      </div>
+      <Card>
+        <CardContent className="p-12 text-center">
+          <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+          <h3 className="text-lg font-medium text-foreground mb-1">
+            No matching classrooms
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {query
+              ? `No classrooms match "${query}".`
+              : "No classrooms match the current filters."}
+          </p>
+          <Button variant="outline" onClick={onClear}>
+            <X className="w-3.5 h-3.5 mr-1" />
+            Clear filters
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
   return (
-    <div className="bg-card border border-border rounded-lg p-12 text-center">
-      <Users className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-      <h3 className="text-lg font-medium text-foreground mb-1">
-        No classrooms yet
-      </h3>
-      <p className="text-sm text-muted-foreground mb-4">
-        Create your first classroom to group students for exams.
-      </p>
-      <Button onClick={onCreate}>
-        <Plus className="w-4 h-4 mr-2" />
-        Create Classroom
-      </Button>
-    </div>
+    <Card>
+      <CardContent className="p-12 text-center">
+        <Users className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+        <h3 className="text-lg font-medium text-foreground mb-1">
+          No classrooms yet
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Create your first classroom to group students for exams.
+        </p>
+        <Button onClick={onCreate}>
+          <Plus className="w-4 h-4 mr-2" />
+          Create Classroom
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

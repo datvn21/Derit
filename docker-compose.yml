@@ -6,19 +6,74 @@ services:
     volumes:
       - mongodb_data:/data/db
     environment:
-      - MONGO_INITDB_DATABASE=derit
+      MONGO_INITDB_DATABASE: derit
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # java-compiler removed - using nsjail for code execution instead
-  # See scripts/setup-nsjail.sh for installation instructions
+  server:
+    build:
+      context: ./apps/server
+      dockerfile: Dockerfile.dev
+    image: derit-server:dev
+    ports:
+      - "5001:5001"
+    env_file:
+      - path: ./apps/server/.env
+        required: false
+    environment:
+      NODE_ENV: development
+      PORT: 5001
+      MONGODB_CONNECTIONSTRING: mongodb://mongodb:27017/derit
+      FRONTEND_URL: http://localhost:5173
+      NSJAIL_PATH: /usr/bin/nsjail
+      NSJAIL_CONFIG_DIR: /app/config
+      NSJAIL_WORKSPACE_DIR: /tmp/nsjail-workspace
+      NSJAIL_DISABLE_NEWNS: "true"
+      JAVA_HOME: /usr/lib/jvm/java-11-openjdk
+      PYTHON_BIN: /usr/bin/python3
+      NSJAIL_MAX_CONCURRENT: 4
+      NSJAIL_MEMORY_LIMIT_MB: 512
+      RUN_TIMEOUT: 5000
+      COMPILE_TIMEOUT: 10000
+    volumes:
+      - ./apps/server:/app
+      - /app/node_modules
+      - nsjail_workspace:/tmp/nsjail-workspace
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    command: npm run dev
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    image: derit-web:dev
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_DEV_BACKEND_URL: http://localhost:5001
+      VITE_BACKEND_URL: http://localhost:5001
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    depends_on:
+      - server
+    command: npm run dev -- --host 0.0.0.0
 
 volumes:
   mongodb_data:
+  nsjail_workspace:
 
 networks:
-  derit-network:
-    driver: bridge
+  default:
+    name: derit-network

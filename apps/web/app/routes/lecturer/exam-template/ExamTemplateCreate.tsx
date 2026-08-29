@@ -35,7 +35,7 @@ export default function ExamTemplateCreate() {
   const submit = async (payload: Parameters<typeof examTemplateAPI.create>[0]) => {
     setIsSubmitting(true);
     try {
-      await createMutation.mutateAsync(payload);
+      await createMutation.mutateAsync({ ...payload, isPublished: true });
     } catch {
       // Error already toasted in onError; ensure button re-enables.
       setIsSubmitting(false);

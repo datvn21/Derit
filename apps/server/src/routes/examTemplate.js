@@ -68,6 +68,7 @@ examTemplateRouter.post(
         examType, // 'OOP', 'DSA', 'General'
         language, // 'java' or 'python'
         duration,
+        isPublished,
         examCodes, // Array of exam codes with PDF and questions
       } = req.body;
 
@@ -97,6 +98,7 @@ examTemplateRouter.post(
         examType,
         language: finalLanguage,
         duration,
+        isPublished: Boolean(isPublished),
         examCodes,
         createdBy: req.dbUser._id,
       });
@@ -233,6 +235,7 @@ examTemplateRouter.put(
         "examType",
         "language",
         "duration",
+        "isPublished",
         "examCodes",
       ];
       allowedUpdates.forEach((field) => {

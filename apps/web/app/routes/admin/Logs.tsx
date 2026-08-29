@@ -11,6 +11,15 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { PageLoading } from "~/components/ui/page-loading";
 import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import { useRequireRole } from "~/hooks/useAuth";
 import {
   Activity,
@@ -74,9 +83,9 @@ export default function AdminLogs() {
         className="grid grid-cols-2 md:grid-cols-4 gap-4"
       >
         {stats.slice(0, 4).map((s: any) => (
-          <div
+          <Card
             key={s._id}
-            className="rounded-xl border border-border bg-card p-4"
+            className="p-4"
           >
             <p className="text-xl font-semibold text-foreground tracking-tight">
               {s.count}
@@ -84,12 +93,13 @@ export default function AdminLogs() {
             <p className="text-xs text-muted-foreground truncate mt-1">
               {s._id}
             </p>
-          </div>
+          </Card>
         ))}
       </section>
 
       {/* Filters */}
-      <div className="rounded-xl border border-border bg-card p-4">
+      <Card>
+        <CardContent className="p-4">
         <div className="flex flex-wrap gap-4">
           <Select
             value={activityFilter}
@@ -114,10 +124,11 @@ export default function AdminLogs() {
             </SelectContent>
           </Select>
         </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Logs Table */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <Card className="overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -128,31 +139,29 @@ export default function AdminLogs() {
             <p className="text-sm">No activity logs found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted border-b border-border">
-                <tr>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>
                     Time
-                  </th>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead>
                     User
-                  </th>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead>
                     Activity
-                  </th>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead>
                     IP Address
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {logs.map((log: any) => (
-                  <tr
+                  <TableRow
                     key={log._id}
-                    className="hover:bg-muted/50 transition-[background-color] duration-(--motion-fast) ease-(--motion-ease)"
                   >
-                    <td className="px-5 py-3.5">
+                    <TableCell>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="w-4 h-4 text-muted-foreground" />
                         <div>
@@ -162,8 +171,8 @@ export default function AdminLogs() {
                           </p>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-5 py-3.5">
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground border border-border">
                           {log.userId?.name?.charAt(0) || "?"}
@@ -177,18 +186,17 @@ export default function AdminLogs() {
                           </p>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-5 py-3.5">
+                    </TableCell>
+                    <TableCell>
                       <Badge variant="default">{log.activityType}</Badge>
-                    </td>
-                    <td className="px-5 py-3.5 text-sm text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
                       {log.ipAddress || "N/A"}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
         )}
 
         {/* Pagination */}
@@ -222,7 +230,7 @@ export default function AdminLogs() {
             </div>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

@@ -305,7 +305,10 @@ export function useTemplateState(
                     ? q
                     : {
                         ...q,
-                        starterFiles: [...q.starterFiles, file],
+                        starterFiles: [
+                          ...q.starterFiles,
+                          { ...file, canDownload: false },
+                        ],
                       },
                 ),
               },

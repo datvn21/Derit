@@ -3,7 +3,7 @@
  * step to jump to it (forward jumps only become available once prior
  * steps are valid). Also displays per-step validation state.
  */
-import { Check, type LucideIcon } from "lucide-react";
+import { Check } from "lucide-react";
 import { STEPS, type StepValidation, type WizardStepId } from "./steps";
 import { cn } from "~/lib/utils";
 
@@ -23,9 +23,9 @@ export function StepIndicator({
   return (
     <nav
       aria-label="Wizard progress"
-      className="rounded-xl border border-border bg-card p-3"
+      className="rounded-xl border border-border bg-card p-2 sm:p-3"
     >
-      <ol className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <ol className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
         {STEPS.map((step, idx) => {
           const validation = validations[step.id];
           const isActive = step.id === activeStep;
@@ -44,14 +44,14 @@ export function StepIndicator({
                 onClick={() => canJump && onStepClick(step.id)}
                 aria-current={isActive ? "step" : undefined}
                 className={cn(
-                  "h-full w-full text-left p-4 rounded-lg transition-[background-color,border-color] duration-(--motion-fast) ease-(--motion-ease)",
+                  "h-full min-h-[82px] w-full rounded-lg border p-3 text-left transition-[background-color,border-color,box-shadow] duration-(--motion-fast) ease-(--motion-ease) sm:p-4",
                   "border border-transparent",
-                  canJump && !isActive && "hover:bg-muted cursor-pointer",
-                  !canJump && "opacity-60 cursor-not-allowed",
+                  canJump && !isActive && "cursor-pointer hover:bg-muted",
+                  !canJump && "cursor-not-allowed",
                   isActive && "border-primary bg-primary/5",
                   isActive &&
                     validation.ok &&
-                    "border-success bg-success/5",
+                    "border-primary bg-primary/5 shadow-sm",
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -63,13 +63,13 @@ export function StepIndicator({
                   <div className="min-w-0 flex-1">
                     <p
                       className={cn(
-                        "text-sm font-semibold truncate",
+                        "text-sm font-semibold leading-5",
                         isActive ? "text-foreground" : "text-muted-foreground",
                       )}
                     >
                       {step.label}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    <p className="mt-0.5 line-clamp-2 text-xs leading-4 text-muted-foreground">
                       {step.description}
                     </p>
                   </div>
@@ -93,11 +93,11 @@ function StepBadge({
   valid: boolean;
 }) {
   const base =
-    "shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold border transition-[background-color,color,border-color] duration-(--motion-fast) ease-(--motion-ease)";
+    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-[background-color,color,border-color] duration-(--motion-fast) ease-(--motion-ease)";
   if (valid && !active) {
     return (
-      <div className={cn(base, "bg-success text-success-foreground border-success")}>
-        <Check className="w-4 h-4" />
+      <div className={cn(base, "border-success bg-success text-white")}>
+        <Check className="h-4 w-4" />
       </div>
     );
   }

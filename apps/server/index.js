@@ -39,11 +39,13 @@ const SESSION_SECRET = (() => {
 // Feature flags — explicit, not implicit from NODE_ENV
 const ENABLE_SWAGGER = process.env.ENABLE_SWAGGER === "true" || process.env.NODE_ENV !== "production";
 
-const app = express({ limit: "5mb" });
+const app = express();
 const PORT = process.env.PORT || 5001;
 
 //middleware
-app.use(express.json());
+// Templates can contain several starter/test files, so the default ~100kb
+// JSON parser limit is too small. Keep this below MongoDB's document limit.
+app.use(express.json({ limit: "10mb" }));
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",

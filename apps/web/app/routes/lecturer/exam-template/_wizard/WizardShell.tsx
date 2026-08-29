@@ -8,12 +8,15 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
 import { uploadAPI } from "~/lib/api";
 
-import { useTemplateState, type UseTemplateStateResult } from "./useTemplateState";
+import {
+  useTemplateState,
+  type UseTemplateStateResult,
+} from "./useTemplateState";
 import { validateAll, STEPS, type WizardStepId } from "./steps";
 import { StepIndicator } from "./StepIndicator";
 import { StepTemplateInfo } from "./StepTemplateInfo";
@@ -51,6 +54,7 @@ export function WizardShell({
   const [step, setStep] = useState<WizardStepId>("info");
   const [visited, setVisited] = useState<Set<WizardStepId>>(new Set(["info"]));
   const [activeCodeIndex, setActiveCodeIndex] = useState(0);
+  const [quickTarget, setQuickTarget] = useState("");
 
   // Clamp active code if codes list shrinks.
   useEffect(() => {
@@ -64,13 +68,10 @@ export function WizardShell({
     [state.meta, state.examCodes],
   );
 
-  const goTo = useCallback(
-    (next: WizardStepId) => {
-      setStep(next);
-      setVisited((prev) => new Set(prev).add(next));
-    },
-    [],
-  );
+  const goTo = useCallback((next: WizardStepId) => {
+    setStep(next);
+    setVisited((prev) => new Set(prev).add(next));
+  }, []);
 
   const canGoNext = (): boolean => {
     if (step === "info") return validations.info.ok;
@@ -81,6 +82,22 @@ export function WizardShell({
   const stepIndex = STEPS.findIndex((s) => s.id === step);
   const isLast = step === "review";
   const isFirst = step === "info";
+  const nextIssues =
+    step === "info"
+      ? validations.info.issues
+      : step === "codes"
+        ? validations.codes.issues
+        : [];
+  const nextDisabled = !canGoNext();
+  const nextTooltip = nextDisabled
+    ? [
+        "Complete these items before continuing:",
+        ...nextIssues.slice(0, 3).map((issue) => `• ${issue}`),
+        ...(nextIssues.length > 3
+          ? [`• And ${nextIssues.length - 3} more item(s)`]
+          : []),
+      ].join("\n")
+    : undefined;
 
   const onPrimaryAction = () => {
     if (isLast) {
@@ -157,25 +174,41 @@ export function WizardShell({
     }
   };
 
+  const jumpToEditorItem = (value: string) => {
+    setQuickTarget(value);
+    if (!value) return;
+
+    const codeIndex = Number(value.match(/^code-(\d+)/)?.[1]);
+    if (!Number.isInteger(codeIndex)) return;
+    setActiveCodeIndex(codeIndex);
+    requestAnimationFrame(() => {
+      document
+        .getElementById(`wizard-${value}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <header className="border-b border-border/80 bg-card/95">
+        <div className="relative mx-auto flex h-14 w-full max-w-6xl items-center justify-center px-4 sm:px-6">
+          <div className="absolute left-4 flex min-w-0 justify-start sm:left-6">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate(backHref)}
-              className="text-muted-foreground"
+              className="h-8 rounded-md border border-border bg-muted/70 px-3 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              <X className="h-3.5 w-3.5 mr-1.5" /> Leave
             </Button>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">
-              {title}
-            </h1>
           </div>
-          <div className="text-xs text-muted-foreground hidden sm:block">
+
+          <h1 className="min-w-0 max-w-[46vw] truncate text-center text-base font-semibold tracking-tight text-foreground sm:max-w-[56vw]">
+            {title}
+          </h1>
+
+          <div className="absolute right-6 hidden min-w-0 rounded-md border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground sm:flex">
             Step {stepIndex + 1} of {STEPS.length}
           </div>
         </div>
@@ -195,6 +228,7 @@ export function WizardShell({
             state={state}
             activeCodeIndex={activeCodeIndex}
             onActiveCodeChange={setActiveCodeIndex}
+            jumpTarget={quickTarget}
           />
         )}
         {step === "review" && (
@@ -209,7 +243,7 @@ export function WizardShell({
 
         {/* Bottom nav (only when not on Review — Review has its own submit). */}
         {!isLast && (
-          <div className="flex items-center justify-between pt-2">
+          <div className="sticky bottom-4 z-20 -mx-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/80 bg-card/95 px-3 py-2.5 sm:-mx-1 sm:px-4">
             <Button
               variant="outline"
               onClick={() => {
@@ -220,9 +254,51 @@ export function WizardShell({
             >
               Previous
             </Button>
-            <Button onClick={onPrimaryAction} disabled={!canGoNext()}>
-              Next
-            </Button>
+            {step === "codes" && (
+              <select
+                value={quickTarget}
+                onChange={(event) => jumpToEditorItem(event.target.value)}
+                aria-label="Jump to question or test case"
+                className="order-last min-w-0 w-full rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] sm:order-none sm:mx-4 sm:w-auto sm:max-w-[18rem] sm:flex-1 sm:text-sm"
+              >
+                <option value="">Jump to question or test case</option>
+                {state.examCodes.map((code, codeIndex) => (
+                  <optgroup
+                    key={`quick-code-${codeIndex}`}
+                    label={`Code ${code.codeNumber || codeIndex + 1}`}
+                  >
+                    {code.questions.map((question, questionIndex) => (
+                      <option
+                        key={`quick-question-${codeIndex}-${questionIndex}`}
+                        value={`code-${codeIndex}-question-${questionIndex}`}
+                      >
+                        Q{questionIndex + 1}: {question.title}
+                      </option>
+                    ))}
+                    {code.questions.flatMap((question, questionIndex) =>
+                      question.testCases.map((_, testCaseIndex) => (
+                        <option
+                          key={`quick-test-${codeIndex}-${questionIndex}-${testCaseIndex}`}
+                          value={`code-${codeIndex}-question-${questionIndex}-testcase-${testCaseIndex}`}
+                        >
+                          Q{questionIndex + 1} · Test case {testCaseIndex + 1}
+                        </option>
+                      )),
+                    )}
+                  </optgroup>
+                ))}
+              </select>
+            )}
+            <span
+              title={nextTooltip}
+              tabIndex={nextDisabled ? 0 : undefined}
+              aria-label={nextTooltip}
+              className={nextDisabled ? "cursor-not-allowed" : undefined}
+            >
+              <Button onClick={onPrimaryAction} disabled={nextDisabled}>
+                Next
+              </Button>
+            </span>
           </div>
         )}
       </main>

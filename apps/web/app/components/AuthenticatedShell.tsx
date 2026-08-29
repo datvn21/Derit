@@ -11,20 +11,39 @@
  *   - accent:     bg-sidebar-accent · text-sidebar-accent-foreground
  *   - motion:     --motion-fast var(--motion-ease) (150ms)
  */
-import { type ComponentType, type ReactNode, type SVGProps } from "react";
-import { Link, Outlet, useLocation } from "react-router";
+import {
+  type ComponentType,
+  type ReactNode,
+  type SVGProps,
+  useEffect,
+  useState,
+} from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { LogOut, Shield } from "lucide-react";
+import {
+  CalendarDays,
+  FileText,
+  GraduationCap,
+  LogOut,
+  Shield,
+  Users,
+} from "lucide-react";
 import Logo from "~/components/Logo";
 import { PageLoading } from "~/components/ui/page-loading";
 import { cn } from "~/lib/utils";
 import { useAuth } from "~/hooks/useAuth";
 import type { Role } from "~/types/api";
+import {
+  getRecentItems,
+  RECENTS_UPDATED_EVENT,
+  type RecentItem,
+} from "~/lib/recents";
 
 export interface NavItem {
   name: string;
@@ -39,21 +58,60 @@ export interface AuthenticatedShellProps {
   children?: ReactNode;
 }
 
+type ModeItem = {
+  label: string;
+  href: string;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+};
+
 export default function AuthenticatedShell({
   navigation,
   roleLabel,
   children,
 }: AuthenticatedShellProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, isLoading, logout } = useAuth();
+  const isLecturer = roleLabel === "Lecturer";
+  const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
 
   const isActive = (path: string, exact?: boolean) => {
     if (exact) return location.pathname === path;
     return location.pathname.startsWith(path);
   };
 
+  useEffect(() => {
+    if (!isLecturer) return;
+
+    const updateRecents = () => setRecentItems(getRecentItems());
+    updateRecents();
+    window.addEventListener(RECENTS_UPDATED_EVENT, updateRecents);
+    return () => window.removeEventListener(RECENTS_UPDATED_EVENT, updateRecents);
+  }, [isLecturer]);
+
   if (isLoading || !user) {
     return <PageLoading label={`Loading ${roleLabel}…`} />;
+  }
+
+  const canOpenAdmin = user.role === "admin" || user.isSuperAdmin;
+  const canOpenLecturer =
+    user.role === "lecturer" || user.role === "admin" || user.isSuperAdmin;
+  const modeItems: ModeItem[] = [];
+
+  if (roleLabel !== "Admin Panel" && canOpenAdmin) {
+    modeItems.push({
+      label: "Switch to Admin",
+      href: "/admin",
+      icon: Shield,
+    });
+  }
+
+  if (roleLabel !== "Lecturer" && canOpenLecturer) {
+    modeItems.push({
+      label: "Switch to Lecturer",
+      href: "/lecturer",
+      icon: GraduationCap,
+    });
   }
 
   return (
@@ -75,9 +133,6 @@ export default function AuthenticatedShell({
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
-          <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-            Menu
-          </p>
           {navigation.map((item) => {
             const active = isActive(item.href, item.exact);
             const Icon = item.icon;
@@ -107,6 +162,47 @@ export default function AuthenticatedShell({
               </Link>
             );
           })}
+
+          {isLecturer && recentItems.length > 0 && (
+            <div className="mt-8 pt-5 border-t border-sidebar-border">
+              <p className="px-3 mb-2 text-xs font-medium text-muted-foreground">
+                Recents
+              </p>
+              {recentItems.map((item) => {
+                const Icon =
+                  item.type === "Template"
+                    ? FileText
+                    : item.type === "Session"
+                      ? CalendarDays
+                      : Users;
+                const active = location.pathname === item.href;
+                return (
+                  <Link
+                    key={`recent-${item.name}`}
+                    to={item.href}
+                    className={cn(
+                      "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm",
+                      "transition-[color,background-color] duration-(--motion-fast) ease-(--motion-ease)",
+                      active
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <Icon
+                      className="w-4 h-4 shrink-0 text-muted-foreground group-hover:text-foreground"
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 truncate">
+                      <span className="block truncate">{item.name}</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        {item.type}
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </nav>
 
         <div className="border-t border-sidebar-border bg-sidebar">
@@ -138,7 +234,21 @@ export default function AuthenticatedShell({
                   </span>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" className="w-48">
+              <DropdownMenuContent side="right" className="w-52">
+                {modeItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={item.href}
+                      onSelect={() => navigate(item.href)}
+                      className="cursor-pointer"
+                    >
+                      <Icon className="w-4 h-4 mr-2" />
+                      {item.label}
+                    </DropdownMenuItem>
+                  );
+                })}
+                {modeItems.length > 0 && <DropdownMenuSeparator />}
                 <DropdownMenuItem
                   onClick={() => void logout()}
                   className="text-destructive cursor-pointer focus:text-destructive focus:bg-destructive/10"

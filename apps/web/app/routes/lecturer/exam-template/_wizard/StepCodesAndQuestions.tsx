@@ -31,7 +31,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Trash2,
-  Eye,
   ExternalLink,
 } from "lucide-react";
 import type { UseTemplateStateResult } from "./useTemplateState";
@@ -43,10 +42,12 @@ export function StepCodesAndQuestions({
   state,
   activeCodeIndex,
   onActiveCodeChange,
+  jumpTarget,
 }: {
   state: UseTemplateStateResult;
   activeCodeIndex: number;
   onActiveCodeChange: (i: number) => void;
+  jumpTarget?: string;
 }) {
   const { examCodes, addExamCode, removeExamCode, setPdfFile } = state;
   const code = examCodes[activeCodeIndex];
@@ -75,12 +76,13 @@ export function StepCodesAndQuestions({
               type="button"
               role="tab"
               aria-selected={active}
+              data-state={active ? "active" : "inactive"}
               onClick={() => onActiveCodeChange(ci)}
               className={cn(
-                "group relative flex items-center gap-2 px-3 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "group relative -mb-px flex items-center gap-2 whitespace-nowrap rounded-t-lg border-b-2 px-4 py-3 text-sm font-medium transition-[background-color,color,border-color] duration-(--motion-fast) ease-(--motion-ease) cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 active
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+                  ? "border-primary bg-primary/10 text-primary font-semibold"
+                  : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground",
               )}
             >
               <span className="truncate max-w-32">
@@ -170,7 +172,11 @@ export function StepCodesAndQuestions({
       {/* ── 3. Questions list ──────────────────────────────────────────── */}
       {code && (
         <div className="px-6 py-6 bg-background">
-          <QuestionsEditor state={state} activeCodeIndex={activeCodeIndex} />
+          <QuestionsEditor
+            state={state}
+            activeCodeIndex={activeCodeIndex}
+            jumpTarget={jumpTarget}
+          />
         </div>
       )}
 
@@ -250,11 +256,10 @@ function PdfField({
   return (
     <div className="flex items-center gap-3 px-4 py-3 border border-border rounded-md bg-muted/40">
       <FileText className="w-4 h-4 text-primary shrink-0" />
-      <span className="text-sm font-mono text-foreground truncate flex-1 min-w-0">
+      <span className="text-sm font-sans text-foreground truncate flex-1 min-w-0">
         {filename}
       </span>
       <Button type="button" variant="outline" size="sm" onClick={onPreview}>
-        <Eye className="w-3.5 h-3.5 mr-1" />
         Preview
       </Button>
       <label className="text-xs text-muted-foreground hover:text-foreground cursor-pointer px-2 py-1 rounded hover:bg-muted transition-colors shrink-0">
@@ -292,10 +297,7 @@ function PdfPreviewDialog({
         className="!max-w-none w-[90vw] h-[90vh] p-0 gap-0 overflow-hidden"
       >
         <DialogHeader className="border-b border-border px-4 py-3">
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            PDF preview
-          </DialogTitle>
+          <DialogTitle>PDF preview</DialogTitle>
         </DialogHeader>
         <div className="h-[calc(90vh-7rem)] bg-muted">
           {url && (

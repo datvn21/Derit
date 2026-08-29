@@ -10,7 +10,6 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-yarn-error.log
 lerna-debug.log*
 pnpm-debug.log*
 
@@ -20,7 +19,6 @@ pnpm-debug.log*
 dist/
 dist-ssr/
 build/
-*.local
 .next/
 out/
 
@@ -28,10 +26,7 @@ out/
 # Environment variables & secrets
 # ===========================================
 .env
-.env.local
-.env.development
-.env.production
-.env.*.local
+.env.*
 !.env.example
 
 # ===========================================
@@ -41,7 +36,6 @@ out/
 *.swp
 *.swo
 *~
-.DS_Store
 Thumbs.db
 .vscode/
 *.code-workspace
@@ -80,6 +74,10 @@ packages/*/package-lock.json
 *.tsbuildinfo
 .parcel-cache/
 .cache/
+temp/
+uploads/
+*.tmp
+*.temp
 
 # ===========================================
 # Apps specific
@@ -125,6 +123,7 @@ agent-transcripts/
 # Docker
 # ===========================================
 .docker/
+docker-compose.override.yml
 
 # ===========================================
 # Development artifacts

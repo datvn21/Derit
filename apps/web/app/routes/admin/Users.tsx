@@ -5,6 +5,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Card, CardContent } from "~/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -185,7 +195,8 @@ export default function AdminUsers() {
       </header>
 
       {/* Filters */}
-      <div className="rounded-xl border border-border bg-card p-4">
+      <Card>
+        <CardContent className="p-4">
           <div className="flex flex-wrap gap-4">
             {/* Search */}
             <form onSubmit={handleSearch} className="flex-1 min-w-[200px]">
@@ -225,10 +236,11 @@ export default function AdminUsers() {
               </SelectContent>
             </Select>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
       {/* Users Table */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <Card className="overflow-hidden">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -239,31 +251,30 @@ export default function AdminUsers() {
               <p className="text-sm">No users found</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted border-b border-border">
-                  <tr>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>
                       User
-                    </th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead>
                       Role
-                    </th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead>
                       Status
-                    </th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead>
                       Last Login
-                    </th>
-                    <th className="text-right px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="text-right">
                       Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {users.map((u: any) => (
-                    <tr key={u._id} className="hover:bg-muted/50 transition-[background-color] duration-(--motion-fast) ease-(--motion-ease)">
-                      <td className="px-5 py-3.5">
+                    <TableRow key={u._id}>
+                      <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center text-accent-foreground text-sm font-medium">
                             {u.name.charAt(0)}
@@ -276,8 +287,8 @@ export default function AdminUsers() {
                             )}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-5 py-3.5">
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           {u.role === "admin" ? (
                             <Badge variant="destructive">
@@ -297,8 +308,8 @@ export default function AdminUsers() {
                             <Badge variant="success">Student</Badge>
                           )}
                         </div>
-                      </td>
-                      <td className="px-5 py-3.5">
+                      </TableCell>
+                      <TableCell>
                         {u.isActive ? (
                           <Badge variant="success">
                             <UserCheck className="w-3 h-3" /> Active
@@ -308,13 +319,13 @@ export default function AdminUsers() {
                             <UserX className="w-3 h-3" /> Inactive
                           </Badge>
                         )}
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
                         {u.lastLogin
                           ? new Date(u.lastLogin).toLocaleDateString()
                           : "Never"}
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
+                      </TableCell>
+                      <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
@@ -339,12 +350,11 @@ export default function AdminUsers() {
                             </Button>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
           )}
 
           {/* Pagination */}
@@ -378,7 +388,7 @@ export default function AdminUsers() {
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
       {/* Create User Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
@@ -490,27 +500,26 @@ export default function AdminUsers() {
             </div>
             {editForm.role === "admin" && user.isSuperAdmin && (
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   id="edit-super"
                   checked={editForm.isSuperAdmin}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, isSuperAdmin: e.target.checked })
+                  onCheckedChange={(checked) =>
+                    setEditForm({
+                      ...editForm,
+                      isSuperAdmin: checked === true,
+                    })
                   }
-                  className="rounded"
                 />
                 <Label htmlFor="edit-super">Super Admin</Label>
               </div>
             )}
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="edit-active"
                 checked={editForm.isActive}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, isActive: e.target.checked })
+                onCheckedChange={(checked) =>
+                  setEditForm({ ...editForm, isActive: checked === true })
                 }
-                className="rounded"
               />
               <Label htmlFor="edit-active">Active</Label>
             </div>

@@ -1,5 +1,6 @@
 services:
   mongodb:
+    image: mongo:7
     restart: unless-stopped
     volumes:
       - mongodb_prod_data:/data/db
@@ -16,17 +17,24 @@ services:
       context: ./apps/server
       dockerfile: Dockerfile
     image: derit-server:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongodb:27017/derit
-      - NSJAIL_MAX_CONCURRENT=5
-      - NSJAIL_MEMORY_LIMIT_MB=256
-      - RUN_TIMEOUT=3000
-      - COMPILE_TIMEOUT=15000
+    expose:
+      - "3000"
     env_file:
-      - ./apps/server/.env
+      - path: ./apps/server/.env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGODB_CONNECTIONSTRING: mongodb://mongodb:27017/derit
+      FRONTEND_URL: http://localhost
+      NSJAIL_PATH: /usr/bin/nsjail
+      NSJAIL_CONFIG_DIR: /app/config
+      NSJAIL_WORKSPACE_DIR: /tmp/nsjail-workspace
+      NSJAIL_DISABLE_NEWNS: "true"
+      NSJAIL_MAX_CONCURRENT: 5
+      NSJAIL_MEMORY_LIMIT_MB: 256
+      RUN_TIMEOUT: 3000
+      COMPILE_TIMEOUT: 15000
     restart: unless-stopped
     mem_limit: 2g
     deploy:
@@ -41,7 +49,7 @@ services:
       mongodb:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -50,12 +58,11 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+      args:
+        VITE_BACKEND_URL: /api
     image: derit-web:latest
     ports:
       - "80:80"
-      - "443:443"
-    environment:
-      - VITE_API_URL=http://server:3000
     restart: unless-stopped
     mem_limit: 384m
     deploy:
@@ -65,11 +72,12 @@ services:
         reservations:
           memory: 192M
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
 volumes:
   mongodb_prod_data:
 
 networks:
-  derit-network:
+  default:
     name: derit-prod-network
