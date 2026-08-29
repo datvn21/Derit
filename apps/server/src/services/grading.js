@@ -1,5 +1,5 @@
 /**
- * Grading helpers — pure functions extracted from the god `submission.js`
+ * Grading helpers - pure functions extracted from the god `submission.js`
  * route. Keeping them side-effect-free makes scoring logic unit-testable
  * without spinning up Mongoose or an executor.
  */

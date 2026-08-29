@@ -60,7 +60,7 @@ function ViewToggleButton({
       className={cn(
         "inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]",
         active
-          ? "bg-card text-foreground shadow-sm"
+          ? "bg-card text-foreground"
           : "text-muted-foreground hover:text-foreground",
       )}
     >

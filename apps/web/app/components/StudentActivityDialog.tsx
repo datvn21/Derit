@@ -55,18 +55,78 @@ interface EventConfig {
 }
 
 const EVENT_CONFIG: Record<string, EventConfig> = {
-  exam_join: { icon: LogIn, label: "Joined exam", badgeVariant: "info", severity: "info" },
-  exam_exit: { icon: LogOut, label: "Exited exam", badgeVariant: "default", severity: "info" },
-  exam_submit: { icon: CheckCircle2, label: "Submitted exam", badgeVariant: "success", severity: "success" },
-  tab_switch: { icon: Eye, label: "Tab switch", badgeVariant: "destructive", severity: "danger" },
-  fullscreen_exit: { icon: Maximize, label: "Left fullscreen", badgeVariant: "destructive", severity: "danger" },
-  copy_attempt: { icon: ClipboardCopy, label: "Copy attempt", badgeVariant: "warning", severity: "warn" },
-  paste_attempt: { icon: ClipboardPaste, label: "Paste attempt", badgeVariant: "warning", severity: "warn" },
-  right_click: { icon: MousePointerClick, label: "Right-click", badgeVariant: "warning", severity: "warn" },
-  code_run_all: { icon: Play, label: "Run all test cases", badgeVariant: "info", severity: "info" },
-  code_run_testcase: { icon: Play, label: "Run test case", badgeVariant: "info", severity: "info" },
-  code_run_console: { icon: Terminal, label: "Console run", badgeVariant: "info", severity: "info" },
-  code_autosave: { icon: Save, label: "Auto-saved", badgeVariant: "default", severity: "info" },
+  exam_join: {
+    icon: LogIn,
+    label: "Joined exam",
+    badgeVariant: "info",
+    severity: "info",
+  },
+  exam_exit: {
+    icon: LogOut,
+    label: "Exited exam",
+    badgeVariant: "default",
+    severity: "info",
+  },
+  exam_submit: {
+    icon: CheckCircle2,
+    label: "Submitted exam",
+    badgeVariant: "success",
+    severity: "success",
+  },
+  tab_switch: {
+    icon: Eye,
+    label: "Tab switch",
+    badgeVariant: "destructive",
+    severity: "danger",
+  },
+  fullscreen_exit: {
+    icon: Maximize,
+    label: "Left fullscreen",
+    badgeVariant: "destructive",
+    severity: "danger",
+  },
+  copy_attempt: {
+    icon: ClipboardCopy,
+    label: "Copy attempt",
+    badgeVariant: "warning",
+    severity: "warn",
+  },
+  paste_attempt: {
+    icon: ClipboardPaste,
+    label: "Paste attempt",
+    badgeVariant: "warning",
+    severity: "warn",
+  },
+  right_click: {
+    icon: MousePointerClick,
+    label: "Right-click",
+    badgeVariant: "warning",
+    severity: "warn",
+  },
+  code_run_all: {
+    icon: Play,
+    label: "Run all test cases",
+    badgeVariant: "info",
+    severity: "info",
+  },
+  code_run_testcase: {
+    icon: Play,
+    label: "Run test case",
+    badgeVariant: "info",
+    severity: "info",
+  },
+  code_run_console: {
+    icon: Terminal,
+    label: "Console run",
+    badgeVariant: "info",
+    severity: "info",
+  },
+  code_autosave: {
+    icon: Save,
+    label: "Auto-saved",
+    badgeVariant: "default",
+    severity: "info",
+  },
 };
 
 function formatTs(ts: string) {
@@ -89,7 +149,7 @@ function formatDetail(entry: LogEntry): string | null {
       return `Score: ${(d.finalScore ?? 0).toFixed(1)}/10 | Questions: ${d.questionCount ?? 0}`;
     case "code_run_testcase":
       return entry.questionNumber != null
-        ? `Q${entry.questionNumber} — TC #${d.testCaseIndex ?? "?"}`
+        ? `Q${entry.questionNumber} - TC #${d.testCaseIndex ?? "?"}`
         : null;
     case "code_run_all":
       return entry.questionNumber != null ? `Q${entry.questionNumber}` : null;
@@ -103,12 +163,17 @@ function formatDetail(entry: LogEntry): string | null {
 function SeverityStats({ logs }: { logs: LogEntry[] }) {
   const counts = {
     tab_switch: logs.filter((l) => l.activityType === "tab_switch").length,
-    fullscreen_exit: logs.filter((l) => l.activityType === "fullscreen_exit").length,
+    fullscreen_exit: logs.filter((l) => l.activityType === "fullscreen_exit")
+      .length,
     copy_attempt: logs.filter((l) => l.activityType === "copy_attempt").length,
-    paste_attempt: logs.filter((l) => l.activityType === "paste_attempt").length,
+    paste_attempt: logs.filter((l) => l.activityType === "paste_attempt")
+      .length,
     code_run_all: logs.filter((l) => l.activityType === "code_run_all").length,
-    code_run_testcase: logs.filter((l) => l.activityType === "code_run_testcase").length,
-    code_run_console: logs.filter((l) => l.activityType === "code_run_console").length,
+    code_run_testcase: logs.filter(
+      (l) => l.activityType === "code_run_testcase",
+    ).length,
+    code_run_console: logs.filter((l) => l.activityType === "code_run_console")
+      .length,
     exam_join: logs.filter((l) => l.activityType === "exam_join").length,
   };
 
@@ -143,7 +208,12 @@ function SeverityStats({ logs }: { logs: LogEntry[] }) {
           counts.copy_attempt + counts.paste_attempt > 0 ? "warning" : "default"
         }
       />
-      <StatPill icon={LogIn} label="Joins" value={counts.exam_join} variant="info" />
+      <StatPill
+        icon={LogIn}
+        label="Joins"
+        value={counts.exam_join}
+        variant="info"
+      />
       <StatPill icon={Play} label="Code runs" value={codeRuns} variant="info" />
     </div>
   );
@@ -172,7 +242,11 @@ function StatPill({
   );
 }
 
-export default function StudentActivityDialog({ sessionId, student, onClose }: Props) {
+export default function StudentActivityDialog({
+  sessionId,
+  student,
+  onClose,
+}: Props) {
   const { data, isLoading } = useQuery({
     queryKey: ["student-activity", sessionId, student?._id],
     queryFn: () =>
@@ -232,11 +306,14 @@ export default function StudentActivityDialog({ sessionId, student, onClose }: P
               {submission.submittedAt && (
                 <span className="flex items-center gap-1 text-muted-foreground">
                   <Clock className="w-3 h-3" />
-                  {new Date(submission.submittedAt).toLocaleTimeString("vi-VN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}
+                  {new Date(submission.submittedAt).toLocaleTimeString(
+                    "vi-VN",
+                    {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    },
+                  )}
                 </span>
               )}
             </div>

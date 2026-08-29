@@ -172,41 +172,52 @@ export default function ExamSessionCreate() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-card/95 backdrop-blur-xs">
+        <div className="relative mx-auto flex h-14 w-full max-w-6xl items-center justify-center px-4 sm:px-6">
+          <div className="absolute left-4 flex min-w-0 justify-start sm:left-6">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/lecturer/exam-sessions")}
+              className="h-8 rounded-md border border-border bg-muted/70 px-3 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <ArrowLeft className="w-4 h-4 mr-1" />
+              <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
               Back
             </Button>
-            <div className="h-4 w-px bg-border" />
-            <h1 className="text-lg font-semibold text-foreground">
-              Create Exam Session
-            </h1>
           </div>
-          <Button
-            onClick={handleSubmit}
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending ? "Creating..." : "Create Session"}
-          </Button>
-        </div>
-      </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+          <h1 className="min-w-0 max-w-[46vw] truncate text-center text-base font-semibold tracking-tight text-foreground sm:max-w-[56vw]">
+            Create Exam Session
+          </h1>
+
+          <div className="absolute right-4 flex min-w-0 justify-end sm:right-6">
+            <Button
+              size="sm"
+              onClick={handleSubmit}
+              disabled={createMutation.isPending}
+              className="h-8 rounded-md px-3.5 text-xs font-medium"
+            >
+              {createMutation.isPending ? "Creating..." : "Create Session"}
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ── Left column ── */}
           <div className="lg:col-span-2 space-y-5">
             {/* Template */}
             <div className="bg-card border border-border rounded-md p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-foreground">Template</h2>
+              <h2 className="text-sm font-semibold text-foreground">
+                Template
+              </h2>
 
               <div className="space-y-1">
-                <Label htmlFor="template" className="text-xs text-muted-foreground">
+                <Label
+                  htmlFor="template"
+                  className="text-xs text-muted-foreground"
+                >
                   Exam Template <span className="text-destructive">*</span>
                 </Label>
                 <Popover
@@ -286,7 +297,9 @@ export default function ExamSessionCreate() {
                     <Badge variant="default" className="capitalize">
                       {selectedTemplate.language}
                     </Badge>
-                    <Badge variant="default">{selectedTemplate.duration} min</Badge>
+                    <Badge variant="default">
+                      {selectedTemplate.duration} min
+                    </Badge>
                     <Badge variant="default">
                       {selectedTemplate.examCodes?.length || 0} codes
                     </Badge>
@@ -302,7 +315,10 @@ export default function ExamSessionCreate() {
               </h2>
 
               <div className="space-y-1">
-                <Label htmlFor="sessionName" className="text-xs text-muted-foreground">
+                <Label
+                  htmlFor="sessionName"
+                  className="text-xs text-muted-foreground"
+                >
                   Session Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
@@ -316,7 +332,10 @@ export default function ExamSessionCreate() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="startTime" className="text-xs text-muted-foreground">
+                  <Label
+                    htmlFor="startTime"
+                    className="text-xs text-muted-foreground"
+                  >
                     Start Time <span className="text-destructive">*</span>
                   </Label>
                   <Input
@@ -341,7 +360,10 @@ export default function ExamSessionCreate() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="endTime" className="text-xs text-muted-foreground">
+                  <Label
+                    htmlFor="endTime"
+                    className="text-xs text-muted-foreground"
+                  >
                     End Time <span className="text-destructive">*</span>
                   </Label>
                   <Input
@@ -355,7 +377,10 @@ export default function ExamSessionCreate() {
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="accessKey" className="text-xs text-muted-foreground">
+                <Label
+                  htmlFor="accessKey"
+                  className="text-xs text-muted-foreground"
+                >
                   Access Key <span className="text-destructive">*</span>
                 </Label>
                 <div className="flex gap-2">
@@ -533,7 +558,10 @@ export default function ExamSessionCreate() {
               )}
 
               <div className="space-y-1">
-                <Label htmlFor="whitelist" className="text-xs text-muted-foreground">
+                <Label
+                  htmlFor="whitelist"
+                  className="text-xs text-muted-foreground"
+                >
                   Manual (email per line)
                 </Label>
                 <Textarea
@@ -550,11 +578,17 @@ export default function ExamSessionCreate() {
             {/* Blacklist */}
             <div className="bg-card border border-border rounded-md p-5 space-y-3">
               <h2 className="text-sm font-semibold text-foreground">
+            <div className="bg-card border border-border rounded-md p-5 space-y-2">
+              <Label
+                htmlFor="blacklist"
+                className="text-sm font-semibold text-foreground block"
+              >
                 Blacklist{" "}
                 <span className="text-xs font-normal text-muted-foreground">
                   (optional)
                 </span>
               </h2>
+              </Label>
               <Textarea
                 id="blacklist"
                 value={blacklist}

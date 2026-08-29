@@ -329,7 +329,7 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
                   ? "runtime_error"
                   : "wrong_answer";
         } else {
-          // --- Full run: all testcases — run per-testcase to inject testFile/extraFiles ---
+          // --- Full run: all testcases - run per-testcase to inject testFile/extraFiles ---
           // Re-fetch template with .lean() for guaranteed plain POJO with full file content
           const templateLean = await ExamTemplateModel.findById(
             session.examTemplateId._id ?? session.examTemplateId,
@@ -447,7 +447,7 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
           }
         }
 
-        // Recalculate final score — average of all question scores (thang 10)
+        // Recalculate final score - average of all question scores (thang 10)
         const scoredSubs = submissionToUpdate.submissions.filter(
           (s) => s.totalScore !== undefined,
         );
@@ -542,7 +542,7 @@ submissionRouter.post("/", isAuthenticated, async (req, res) => {
   }
 });
 
-// B: SSE endpoint — client connects here after POST / to receive results without polling.
+// B: SSE endpoint - client connects here after POST / to receive results without polling.
 // If result is already cached (execution finished before client connected), respond immediately.
 submissionRouter.get("/:id/events", isAuthenticated, (req, res) => {
   const { qn, tc } = req.query; // qn = questionNumber, tc = testCaseIndex (optional)
@@ -587,7 +587,7 @@ submissionRouter.get("/:id/events", isAuthenticated, (req, res) => {
   }
   submissionSSEMap.get(key).add(res);
 
-  // Cleanup on client disconnect — uses the helper so the map stays consistent.
+  // Cleanup on client disconnect - uses the helper so the map stays consistent.
   req.on("close", () => removeSSEClient(key, res));
 
   // Safety timeout: 2 minutes
@@ -679,7 +679,7 @@ submissionRouter.get(
   },
 );
 
-// Export CSV from StudentSubmission (Lecturer only) — works before Finalize
+// Export CSV from StudentSubmission (Lecturer only) - works before Finalize
 submissionRouter.get(
   "/session/:sessionId/export-csv",
   isAuthenticated,
@@ -764,38 +764,38 @@ submissionRouter.get(
         const qCols = Array.from({ length: maxQ }, (_, i) => {
           const d = qMap.get(i + 1);
           // e.g. ="1/5" so Excel won't convert to date
-          return d ? safe(`${d.passed}/${d.total}`) : "—";
+          return d ? safe(`${d.passed}/${d.total}`) : "-";
         });
 
         const pct =
           totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) : 0;
         const rank = sub.isSubmitted
-          ? (rankMap.get(sub._id.toString()) ?? "—")
-          : "—";
+          ? (rankMap.get(sub._id.toString()) ?? "-")
+          : "-";
         const summary =
-          totalTests > 0 ? safe(`${totalPassed}/${totalTests}`) : "—";
+          totalTests > 0 ? safe(`${totalPassed}/${totalTests}`) : "-";
         // finalScore đã được BE tính theo thang 10
         const score10 = sub.isSubmitted
           ? (sub.finalScore ??
             (totalTests > 0
               ? Math.round((totalPassed / totalTests) * 100) / 10
               : 0))
-          : "—";
+          : "-";
 
         return [
           rank,
           cell(sub.studentId?.name || ""),
-          sub.studentId?.studentId || "—",
-          sub.studentId?.email || "—",
-          sub.examCodeNumber ?? "—",
+          sub.studentId?.studentId || "-",
+          sub.studentId?.email || "-",
+          sub.examCodeNumber ?? "-",
           ...qCols,
           summary,
           sub.isSubmitted
             ? typeof score10 === "number"
               ? score10.toFixed(1)
               : score10
-            : "—",
-          sub.isSubmitted ? `${pct}%` : "—",
+            : "-",
+          sub.isSubmitted ? `${pct}%` : "-",
           sub.isSubmitted ? "Yes" : "No",
           sub.tabSwitchCount || 0,
         ];
@@ -816,7 +816,7 @@ submissionRouter.get(
   },
 );
 
-// Get student's submission WITH testcase details (input + expectedOutput from template) — Lecturer only
+// Get student's submission WITH testcase details (input + expectedOutput from template) - Lecturer only
 submissionRouter.get(
   "/session/:sessionId/student/:studentId/detail",
   isAuthenticated,
@@ -1221,7 +1221,7 @@ submissionRouter.post(
     }
   },
 );
-// Record client-side cheating indicators (copy, paste, fullscreen_exit) — Student only
+// Record client-side cheating indicators (copy, paste, fullscreen_exit) - Student only
 submissionRouter.post(
   "/record-client-event/:examSessionId",
   isAuthenticated,
@@ -1291,7 +1291,7 @@ function emitRegradeEvent(sessionId, data) {
   }
 }
 
-// SSE stream — client connects here to receive regrade progress
+// SSE stream - client connects here to receive regrade progress
 submissionRouter.get(
   "/session/:sessionId/regrade-progress",
   isAuthenticated,
@@ -1523,7 +1523,7 @@ submissionRouter.post(
             session.examTemplateId._id ?? session.examTemplateId,
           ).lean();
 
-          // Sequential grading: chấm từng sinh viên một — tránh nhiều javac chạy đồng thời
+          // Sequential grading: chấm từng sinh viên một - tránh nhiều javac chạy đồng thời
           // làm bão hòa CPU/RAM trên VPS yếu, gây Compilation timeout.
           for (const submission of submissions) {
             try {
@@ -1535,7 +1535,7 @@ submissionRouter.post(
 
               if (!studentCode) {
                 console.warn(
-                  `[regrade] student ${submission.studentId.name} has no exam code — skipping`,
+                  `[regrade] student ${submission.studentId.name} has no exam code - skipping`,
                 );
                 const count = ++graded;
                 emitRegradeEvent(sessionId, {
@@ -1619,7 +1619,7 @@ submissionRouter.post(
                 }
               }
 
-              // Recalculate final score — average of question scores (thang 10)
+              // Recalculate final score - average of question scores (thang 10)
               const scoredSubs = submission.submissions.filter(
                 (s) => s.totalScore !== undefined,
               );

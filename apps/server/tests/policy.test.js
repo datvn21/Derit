@@ -28,8 +28,21 @@ describe("policy middleware", () => {
   describe("requireAuth", () => {
     it("rejects when isAuthenticated() returns false", () => {
       const req = mockReq();
-      const res = { statusCode: null, body: null, status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; return this; } };
-      requireAuth(req, res, () => { throw new Error("next should not be called"); });
+      const res = {
+        statusCode: null,
+        body: null,
+        status(c) {
+          this.statusCode = c;
+          return this;
+        },
+        json(b) {
+          this.body = b;
+          return this;
+        },
+      };
+      requireAuth(req, res, () => {
+        throw new Error("next should not be called");
+      });
       expect(res.statusCode).toBe(401);
     });
 
@@ -37,7 +50,9 @@ describe("policy middleware", () => {
       const req = mockReq({ isAuthenticatedFn: () => true });
       const res = { statusCode: null };
       let called = false;
-      requireAuth(req, res, () => { called = true; });
+      requireAuth(req, res, () => {
+        called = true;
+      });
       expect(called).toBe(true);
     });
   });
@@ -58,13 +73,19 @@ describe("policy middleware", () => {
       const res = {
         statusCode: null,
         body: null,
-        status(c) { this.statusCode = c; return this; },
-        json(b) { this.body = b; return this; },
+        status(c) {
+          this.statusCode = c;
+          return this;
+        },
+        json(b) {
+          this.body = b;
+          return this;
+        },
       };
       // Simulate DB lookup failure by short-circuiting loadDbUser via no DB user
       let called = false;
       await mw(req, res, (err) => {
-        // No DB connection — loadDbUser throws → falls through to next(err)
+        // No DB connection - loadDbUser throws → falls through to next(err)
         called = err instanceof Error;
       });
       // loadDbUser requires mongoose so just assert it didn't silently allow.
@@ -75,7 +96,11 @@ describe("policy middleware", () => {
 
 describe("KeyedRateLimiter", () => {
   it("stops allowing after the limit is hit", () => {
-    const limiter = new KeyedRateLimiter({ limit: 3, windowMs: 1000, maxEntries: 100 });
+    const limiter = new KeyedRateLimiter({
+      limit: 3,
+      windowMs: 1000,
+      maxEntries: 100,
+    });
     limiter.hit("u1", 0);
     limiter.hit("u1", 1);
     const blocked = limiter.hit("u1", 2);
@@ -87,7 +112,11 @@ describe("KeyedRateLimiter", () => {
   });
 
   it("sweeps expired entries", () => {
-    const limiter = new KeyedRateLimiter({ limit: 1, windowMs: 10, maxEntries: 100 });
+    const limiter = new KeyedRateLimiter({
+      limit: 1,
+      windowMs: 10,
+      maxEntries: 100,
+    });
     limiter.hit("k1", 0);
     expect(limiter.size()).toBe(1);
     limiter._sweep(1000);
@@ -96,7 +125,11 @@ describe("KeyedRateLimiter", () => {
   });
 
   it("evicts oldest entries when capacity exceeded", () => {
-    const limiter = new KeyedRateLimiter({ limit: 1, windowMs: 1000, maxEntries: 2 });
+    const limiter = new KeyedRateLimiter({
+      limit: 1,
+      windowMs: 1000,
+      maxEntries: 2,
+    });
     limiter.hit("a", 0);
     limiter.hit("b", 0);
     limiter.hit("c", 0);
@@ -128,17 +161,32 @@ describe("BoundedCache", () => {
 
 describe("execution file list builder", () => {
   it("rejects invalid filenames (path traversal)", () => {
-    expect(() => buildExecutionFileList({ language: "python", mainFile: "main.py", code: "print('x')", files: [{ name: "../x.py", content: "x" }] })).toThrow(/Invalid file name/);
+    expect(() =>
+      buildExecutionFileList({
+        language: "python",
+        mainFile: "main.py",
+        code: "print('x')",
+        files: [{ name: "../x.py", content: "x" }],
+      }),
+    ).toThrow(/Invalid file name/);
   });
 
   it("rejects extension-mismatched main files", () => {
     expect(() =>
-      buildExecutionFileList({ language: "java", mainFile: "evil.js", code: "x" }),
+      buildExecutionFileList({
+        language: "java",
+        mainFile: "evil.js",
+        code: "x",
+      }),
     ).toThrow(/must use the .java extension/);
   });
 
   it("uses default filename when no files are supplied", () => {
-    const out = buildExecutionFileList({ language: "java", mainFile: "Main.java", code: "" });
+    const out = buildExecutionFileList({
+      language: "java",
+      mainFile: "Main.java",
+      code: "",
+    });
     expect(out.fileList[0].name).toBe("Main.java");
   });
 });

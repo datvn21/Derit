@@ -1,5 +1,5 @@
 /**
- * Student History detail — per-session breakdown for one exam.
+ * Student History detail - per-session breakdown for one exam.
  *
  * Data sources:
  *   - `resultAPI.getMyResult(sessionId)` → score breakdown by question
@@ -30,18 +30,13 @@ import { resultAPI, submissionAPI } from "~/lib/api";
 import { useRequireRole } from "~/hooks/useAuth";
 import { PageLoading } from "~/components/ui/page-loading";
 import { Badge } from "~/components/ui/badge";
-import AuthenticatedShell, { type NavItem } from "~/components/AuthenticatedShell";
+import { FileIcon } from "~/components/ui/file-icon";
 import type {
   ExamResult,
   QuestionScore,
   StudentSubmission,
   QuestionSubmission,
 } from "~/types/api";
-
-const studentNavigation: NavItem[] = [
-  { name: "Dashboard", href: "/student", icon: Gauge, exact: true },
-  { name: "History", href: "/student/history", icon: History },
-];
 
 function percentageVariant(
   pct: number,
@@ -77,14 +72,14 @@ function statusLabel(status: QuestionSubmission["status"]): string {
 }
 
 function formatDuration(minutes: number): string {
-  if (!minutes) return "—";
+  if (!minutes) return "-";
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
 function formatDate(iso?: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString();
 }
 
@@ -95,7 +90,9 @@ export default function HistoryDetail() {
   const resultQuery = useQuery({
     queryKey: ["student-result", sessionId],
     queryFn: () =>
-      resultAPI.getMyResult(sessionId!).then((r) => r.data.result as ExamResult),
+      resultAPI
+        .getMyResult(sessionId!)
+        .then((r) => r.data.result as ExamResult),
     enabled: !!user && !!sessionId,
     retry: false,
   });
@@ -119,34 +116,31 @@ export default function HistoryDetail() {
 
   if (resultQuery.isError || !resultQuery.data) {
     return (
-      <AuthenticatedShell navigation={studentNavigation} roleLabel="Student">
-        <div className="flex flex-col gap-6 p-6 max-w-3xl mx-auto w-full">
-          <Link
-            to="/student/history"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-[color] duration-(--motion-fast) ease-(--motion-ease)"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to history
-          </Link>
-          <div className="rounded-xl border border-border bg-card p-8 text-center">
-            <XCircle className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
-            <p className="text-base font-medium text-foreground">
-              Result not available
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              We couldn't find a result for this exam. You may not have
-              submitted it.
-            </p>
-          </div>
+      <div className="flex flex-col gap-6 p-6 max-w-3xl mx-auto w-full">
+        <Link
+          to="/student/history"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-[color] duration-(--motion-fast) ease-(--motion-ease)"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to history
+        </Link>
+        <div className="rounded-xl border border-border bg-card p-8 text-center">
+          <XCircle className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
+          <p className="text-base font-medium text-foreground">
+            Result not available
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            We couldn't find a result for this exam. You may not have submitted
+            it.
+          </p>
         </div>
-      </AuthenticatedShell>
+      </div>
     );
   }
 
   const result = resultQuery.data;
   const submission = submissionQuery.data;
   const session = result.examSessionId;
-  const examName =
-    session?.examTemplateId?.examName ?? "Unknown exam";
+  const examName = session?.examTemplateId?.examName ?? "Unknown exam";
   const sessionName = session?.sessionName ?? "Untitled session";
   const percentage = result.percentage ?? 0;
 
@@ -159,149 +153,149 @@ export default function HistoryDetail() {
   }
 
   return (
-    <AuthenticatedShell navigation={studentNavigation} roleLabel="Student">
-      <div className="flex flex-col gap-8 p-6 max-w-4xl mx-auto w-full">
-        {/* Back link */}
-        <Link
-          to="/student/history"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-[color] duration-(--motion-fast) ease-(--motion-ease) w-fit"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to history
-        </Link>
+    <div className="flex flex-col gap-8 p-6 max-w-4xl mx-auto w-full">
+      {/* Back link */}
+      <Link
+        to="/student/history"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-[color] duration-(--motion-fast) ease-(--motion-ease) w-fit"
+      >
+        <ArrowLeft className="w-4 h-4" /> Back to history
+      </Link>
 
-        {/* Header */}
-        <header className="flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                {examName}
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Session: {sessionName}
-              </p>
-            </div>
-            <Badge variant={percentageVariant(percentage)} className="text-base px-3 py-1">
-              {result.totalScore.toFixed(1)} / {result.maxPossibleScore}
-              <span className="opacity-70 ml-1">({percentage.toFixed(1)}%)</span>
-            </Badge>
+      {/* Header */}
+      <header className="flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              {examName}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Session: {sessionName}
+            </p>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <Badge
+            variant={percentageVariant(percentage)}
+            className="text-base px-3 py-1"
+          >
+            {result.totalScore.toFixed(1)} / {result.maxPossibleScore}
+            <span className="opacity-70 ml-1">({percentage.toFixed(1)}%)</span>
+          </Badge>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <Badge variant="info">
+            <Hash className="w-3 h-3" /> Code #
+            {submission?.examCodeNumber ?? "-"}
+          </Badge>
+          {result.isFinalized && (
             <Badge variant="info">
-              <Hash className="w-3 h-3" /> Code #{submission?.examCodeNumber ?? "—"}
+              <Trophy className="w-3 h-3" /> Finalized
             </Badge>
-            {result.isFinalized && (
-              <Badge variant="info">
-                <Trophy className="w-3 h-3" /> Finalized
-              </Badge>
-            )}
-            {result.rank != null && <Badge>Rank #{result.rank}</Badge>}
-            {(result.tabSwitchCount ?? 0) > 0 && (
-              <Badge variant="warning">
-                <AlertTriangle className="w-3 h-3" />
-                {result.tabSwitchCount} tab switch
-                {result.tabSwitchCount > 1 ? "es" : ""}
-              </Badge>
-            )}
-            {(result.suspiciousActivities?.length ?? 0) > 0 && (
-              <Badge variant="destructive">
-                <AlertTriangle className="w-3 h-3" /> Flagged
-              </Badge>
-            )}
+          )}
+          {result.rank != null && <Badge>Rank #{result.rank}</Badge>}
+          {(result.tabSwitchCount ?? 0) > 0 && (
+            <Badge variant="warning">
+              <AlertTriangle className="w-3 h-3" />
+              {result.tabSwitchCount} tab switch
+              {result.tabSwitchCount > 1 ? "es" : ""}
+            </Badge>
+          )}
+          {(result.suspiciousActivities?.length ?? 0) > 0 && (
+            <Badge variant="destructive">
+              <AlertTriangle className="w-3 h-3" /> Flagged
+            </Badge>
+          )}
+        </div>
+      </header>
+
+      {/* Summary tiles */}
+      <section
+        aria-label="Result summary"
+        className="grid grid-cols-2 md:grid-cols-4 gap-4"
+      >
+        <SummaryTile
+          icon={Trophy}
+          label="Final score"
+          value={`${result.totalScore.toFixed(1)}`}
+          sub={`of ${result.maxPossibleScore}`}
+        />
+        <SummaryTile
+          icon={Gauge}
+          label="Percentage"
+          value={`${percentage.toFixed(1)}%`}
+        />
+        <SummaryTile
+          icon={Clock}
+          label="Time spent"
+          value={formatDuration(result.totalTimeSpent)}
+        />
+        <SummaryTile
+          icon={Hash}
+          label="Submitted"
+          value={formatDate(result.lastSubmittedAt)}
+          small
+        />
+      </section>
+
+      {/* Per-question breakdown */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-base font-semibold text-foreground">
+          Question breakdown
+        </h2>
+
+        {result.questionScores.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            No question-level data recorded for this exam.
           </div>
-        </header>
+        ) : (
+          <div className="space-y-3">
+            {result.questionScores.map((qs, idx) => {
+              const qKey =
+                typeof qs.questionId === "object" && qs.questionId !== null
+                  ? qs.questionId._id
+                  : qs.questionId?.toString();
+              return (
+                <QuestionCard
+                  key={qKey ?? `q-${idx}`}
+                  index={idx + 1}
+                  qs={qs}
+                  submission={submissionByNumber.get(idx + 1) ?? null}
+                />
+              );
+            })}
+          </div>
+        )}
+      </section>
 
-        {/* Summary tiles */}
-        <section
-          aria-label="Result summary"
-          className="grid grid-cols-2 md:grid-cols-4 gap-4"
-        >
-          <SummaryTile
-            icon={Trophy}
-            label="Final score"
-            value={`${result.totalScore.toFixed(1)}`}
-            sub={`of ${result.maxPossibleScore}`}
-          />
-          <SummaryTile
-            icon={Gauge}
-            label="Percentage"
-            value={`${percentage.toFixed(1)}%`}
-          />
-          <SummaryTile
-            icon={Clock}
-            label="Time spent"
-            value={formatDuration(result.totalTimeSpent)}
-          />
-          <SummaryTile
-            icon={Hash}
-            label="Submitted"
-            value={formatDate(result.lastSubmittedAt)}
-            small
-          />
-        </section>
-
-        {/* Per-question breakdown */}
-        <section className="flex flex-col gap-3">
-          <h2 className="text-base font-semibold text-foreground">
-            Question breakdown
-          </h2>
-
-          {result.questionScores.length === 0 ? (
-            <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-              No question-level data recorded for this exam.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {result.questionScores.map((qs, idx) => {
-                const qKey =
-                  typeof qs.questionId === "object" && qs.questionId !== null
-                    ? qs.questionId._id
-                    : qs.questionId?.toString();
-                return (
-                  <QuestionCard
-                    key={qKey ?? `q-${idx}`}
-                    index={idx + 1}
-                    qs={qs}
-                    submission={submissionByNumber.get(idx + 1) ?? null}
-                  />
-                );
-              })}
+      {/* Metadata footer */}
+      <footer className="rounded-xl border border-border bg-card p-5 text-xs text-muted-foreground">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <p className="uppercase tracking-wider font-medium mb-1">Started</p>
+            <p className="text-foreground">{formatDate(result.startedAt)}</p>
+          </div>
+          <div>
+            <p className="uppercase tracking-wider font-medium mb-1">
+              Last submission
+            </p>
+            <p className="text-foreground">
+              {formatDate(result.lastSubmittedAt)}
+            </p>
+          </div>
+          {result.suspiciousActivities?.length > 0 && (
+            <div className="sm:col-span-2">
+              <p className="uppercase tracking-wider font-medium mb-1 text-destructive">
+                Proctoring flags
+              </p>
+              <ul className="list-disc list-inside space-y-0.5">
+                {result.suspiciousActivities.map((flag, i) => (
+                  <li key={i}>{flag}</li>
+                ))}
+              </ul>
             </div>
           )}
-        </section>
-
-        {/* Metadata footer */}
-        <footer className="rounded-xl border border-border bg-card p-5 text-xs text-muted-foreground">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <p className="uppercase tracking-wider font-medium mb-1">
-                Started
-              </p>
-              <p className="text-foreground">{formatDate(result.startedAt)}</p>
-            </div>
-            <div>
-              <p className="uppercase tracking-wider font-medium mb-1">
-                Last submission
-              </p>
-              <p className="text-foreground">
-                {formatDate(result.lastSubmittedAt)}
-              </p>
-            </div>
-            {result.suspiciousActivities?.length > 0 && (
-              <div className="sm:col-span-2">
-                <p className="uppercase tracking-wider font-medium mb-1 text-destructive">
-                  Proctoring flags
-                </p>
-                <ul className="list-disc list-inside space-y-0.5">
-                  {result.suspiciousActivities.map((flag, i) => (
-                    <li key={i}>{flag}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </footer>
-      </div>
-    </AuthenticatedShell>
+        </div>
+      </footer>
+    </div>
   );
 }
 
@@ -361,7 +355,7 @@ function QuestionCard({
   };
   submission: QuestionSubmission | null;
 }) {
-  // Resolve question title — backend populates questionId with title.
+  // Resolve question title - backend populates questionId with title.
   const title =
     typeof qs.questionId === "object" && qs.questionId !== null
       ? qs.questionId.title
@@ -430,9 +424,7 @@ function QuestionCard({
                   <XCircle className="w-3 h-3" />
                 )}
                 {tr.executionTime > 0 && (
-                  <span className="opacity-70 ml-1">
-                    {tr.executionTime}ms
-                  </span>
+                  <span className="opacity-70 ml-1">{tr.executionTime}ms</span>
                 )}
               </Badge>
             ))}
@@ -441,36 +433,39 @@ function QuestionCard({
       )}
 
       {/* Read-only code block */}
-      {submission && (submission.code || (submission.files && submission.files.length > 0)) && (
-        <details className="group">
-          <summary className="flex items-center gap-2 px-5 py-3 cursor-pointer list-none select-none hover:bg-muted/50 transition-[background-color] duration-(--motion-fast) ease-(--motion-ease)">
-            <Code2 className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">
-              View submitted code
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground">
-              {submission.language}
-            </span>
-          </summary>
-          <div className="border-t border-border bg-muted">
-            {submission.code && (
-              <pre className="px-5 py-4 text-xs font-mono text-foreground overflow-x-auto whitespace-pre">
-                {submission.code}
-              </pre>
-            )}
-            {submission.files?.map((f, i) => (
-              <div key={i} className="border-t border-border">
-                <div className="px-5 py-1.5 text-xs font-medium text-muted-foreground bg-background">
-                  {f.name}
-                </div>
-                <pre className="px-5 py-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre">
-                  {f.content}
+      {submission &&
+        (submission.code ||
+          (submission.files && submission.files.length > 0)) && (
+          <details className="group">
+            <summary className="flex items-center gap-2 px-5 py-3 cursor-pointer list-none select-none hover:bg-muted/50 transition-[background-color] duration-(--motion-fast) ease-(--motion-ease)">
+              <Code2 className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">
+                View submitted code
+              </span>
+              <span className="ml-auto text-xs text-muted-foreground">
+                {submission.language}
+              </span>
+            </summary>
+            <div className="border-t border-border bg-muted">
+              {submission.code && (
+                <pre className="px-5 py-4 text-xs font-mono text-foreground overflow-x-auto whitespace-pre">
+                  {submission.code}
                 </pre>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
+              )}
+              {submission.files?.map((f, i) => (
+                <div key={i} className="border-t border-border">
+                  <div className="px-5 py-1.5 text-xs font-medium text-muted-foreground bg-background flex items-center gap-2">
+                    <FileIcon name={f.name} className="w-3.5 h-3.5" />
+                    <span>{f.name}</span>
+                  </div>
+                  <pre className="px-5 py-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre">
+                    {f.content}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
     </article>
   );
 }

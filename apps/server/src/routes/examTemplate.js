@@ -186,6 +186,13 @@ examTemplateRouter.get(
  *       404:
  *         description: Template not found
  */
+function getTemplateQuery(req) {
+  if (req.dbUser?.role === "admin") {
+    return { _id: req.params.id };
+  }
+  return { _id: req.params.id, createdBy: req.dbUser._id };
+}
+
 // Get template details
 examTemplateRouter.get(
   "/:id",
@@ -193,10 +200,7 @@ examTemplateRouter.get(
   isLecturerOrAdmin,
   async (req, res) => {
     try {
-      const template = await ExamTemplateModel.findOne({
-        _id: req.params.id,
-        createdBy: req.dbUser._id,
-      });
+      const template = await ExamTemplateModel.findOne(getTemplateQuery(req));
 
       if (!template) {
         return res
@@ -218,10 +222,7 @@ examTemplateRouter.put(
   isLecturerOrAdmin,
   async (req, res) => {
     try {
-      const template = await ExamTemplateModel.findOne({
-        _id: req.params.id,
-        createdBy: req.dbUser._id,
-      });
+      const template = await ExamTemplateModel.findOne(getTemplateQuery(req));
 
       if (!template) {
         return res
@@ -252,27 +253,6 @@ examTemplateRouter.put(
   },
 );
 
-/**
- * @swagger
- * /exam-templates/{id}:
- *   delete:
- *     summary: Delete exam template
- *     tags: [Exam Templates]
- *     security:
- *       - cookieAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Template ID
- *     responses:
- *       200:
- *         description: Template deleted successfully
- *       404:
- *         description: Template not found
- */
 // Delete template
 examTemplateRouter.delete(
   "/:id",
@@ -280,10 +260,9 @@ examTemplateRouter.delete(
   isLecturerOrAdmin,
   async (req, res) => {
     try {
-      const template = await ExamTemplateModel.findOneAndDelete({
-        _id: req.params.id,
-        createdBy: req.dbUser._id,
-      });
+      const template = await ExamTemplateModel.findOneAndDelete(
+        getTemplateQuery(req),
+      );
 
       if (!template) {
         return res
@@ -299,31 +278,44 @@ examTemplateRouter.delete(
 );
 
 // Publish/Unpublish template
+const togglePublishHandler = async (req, res) => {
+  try {
+    const template = await ExamTemplateModel.findOne(getTemplateQuery(req));
+
+    if (!template) {
+      return res
+        .status(404)
+        .json({ error: "Template not found or access denied" });
+    }
+
+    const nextStatus =
+      typeof req.body?.isPublished === "boolean"
+        ? req.body.isPublished
+        : !template.isPublished;
+
+    const updated = await ExamTemplateModel.findByIdAndUpdate(
+      template._id,
+      { $set: { isPublished: nextStatus } },
+      { new: true },
+    );
+
+    res.json({ template: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 examTemplateRouter.patch(
   "/:id/publish",
   isAuthenticated,
   isLecturerOrAdmin,
-  async (req, res) => {
-    try {
-      const template = await ExamTemplateModel.findOne({
-        _id: req.params.id,
-        createdBy: req.dbUser._id,
-      });
-
-      if (!template) {
-        return res
-          .status(404)
-          .json({ error: "Template not found or access denied" });
-      }
-
-      template.isPublished = !template.isPublished;
-      await template.save();
-
-      res.json({ template });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  },
+  togglePublishHandler,
+);
+examTemplateRouter.put(
+  "/:id/publish",
+  isAuthenticated,
+  isLecturerOrAdmin,
+  togglePublishHandler,
 );
 
 // Share template to another lecturer by email

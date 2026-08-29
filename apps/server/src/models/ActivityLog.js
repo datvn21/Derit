@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const activityLogSchema = new mongoose.Schema(
   {
-    // Activity type — comprehensive list for legal evidence
+    // Activity type - comprehensive list for legal evidence
     activityType: {
       type: String,
       enum: [
@@ -10,20 +10,20 @@ const activityLogSchema = new mongoose.Schema(
         "login",
         "logout",
         // Exam participation
-        "exam_join",         // student entered exam room
-        "exam_exit",         // navigate away without submitting
-        "exam_submit",       // student officially submitted
+        "exam_join", // student entered exam room
+        "exam_exit", // navigate away without submitting
+        "exam_submit", // student officially submitted
         // Cheating indicators
-        "tab_switch",        // document.visibilityState → hidden
-        "fullscreen_exit",   // left fullscreen mode
-        "copy_attempt",      // Ctrl+C inside editor
-        "paste_attempt",     // Ctrl+V inside editor
-        "right_click",       // right-click suppressed
+        "tab_switch", // document.visibilityState → hidden
+        "fullscreen_exit", // left fullscreen mode
+        "copy_attempt", // Ctrl+C inside editor
+        "paste_attempt", // Ctrl+V inside editor
+        "right_click", // right-click suppressed
         // Code activity
-        "code_run_all",      // run all test cases
+        "code_run_all", // run all test cases
         "code_run_testcase", // run single test case
-        "code_run_console",  // free console run
-        "code_autosave",     // autosave triggered
+        "code_run_console", // free console run
+        "code_autosave", // autosave triggered
         // Lecturer actions
         "grade_update",
         "question_create",

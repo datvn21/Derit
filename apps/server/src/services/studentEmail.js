@@ -1,5 +1,5 @@
 /**
- * Email normalisation helpers — shared across session and submission code.
+ * Email normalisation helpers - shared across session and submission code.
  *
  * The student-id convention in this codebase is "username" (which is
  * expanded to `${id}@student.tdtu.edu.vn`). Pure functions live here so

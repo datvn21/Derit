@@ -1,11 +1,11 @@
 /**
- * Step 2 — Codes & questions.
+ * Step 2 - Codes & questions.
  *
  * Layout: a single surface with three distinct vertical sections.
- * 1. Tab strip — one tab per code, plus an explicit Add code button.
- * 2. Identity card — name, status, and PDF for the active code.
+ * 1. Tab strip - one tab per code, plus an explicit Add code button.
+ * 2. Identity card - name, status, and PDF for the active code.
  *    The card is split into two rows so naming and PDF never collide.
- * 3. Questions list — per-question accordion, expanded by default
+ * 3. Questions list - per-question accordion, expanded by default
  *    for the first question so the user can see the shape.
  *
  * Status indicators (ready / incomplete) render via `<Badge>` variants so
@@ -113,36 +113,33 @@ export function StepCodesAndQuestions({
       {/* ── 2. Identity card ───────────────────────────────────────────── */}
       {code && (
         <div className="px-6 py-5 border-b border-border bg-card">
-          <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
-              <div className="flex flex-row gap-1">
-                <Label
-                  htmlFor="codeNumber"
-                  className="text-xs text-muted-foreground"
-                >
-                  Code label
-                </Label>
-                <Input
-                  id="codeNumber"
-                  value={code.codeNumber}
-                  onChange={(e) =>
-                    state.updateExamCodeField(
-                      activeCodeIndex,
-                      "codeNumber",
-                      e.target.value,
-                    )
-                  }
-                  placeholder="e.g. A, B, 1, 2"
-                  className="h-8 w-24 text-sm font-mono"
-                />
-              </div>
+              <Label
+                htmlFor="codeNumber"
+                className="text-xs font-medium text-muted-foreground whitespace-nowrap"
+              >
+                Code label
+              </Label>
+              <Input
+                id="codeNumber"
+                value={code.codeNumber}
+                onChange={(e) =>
+                  state.updateExamCodeField(
+                    activeCodeIndex,
+                    "codeNumber",
+                    e.target.value,
+                  )
+                }
+                placeholder="e.g. 101"
+                className="h-8 w-28 text-sm"
+              />
+              <CodeStatusBadge code={code} />
             </div>
-
-            <CodeStatusBadge code={code} />
 
             {examCodes.length > 1 && (
               <Button
-                variant="destructive"
+                variant="outline"
                 size="sm"
                 onClick={() => {
                   if (
@@ -153,9 +150,9 @@ export function StepCodesAndQuestions({
                     removeExamCode(activeCodeIndex);
                   }
                 }}
-                className="shrink-0"
+                className="h-8 text-xs text-destructive border-destructive/20 hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive shrink-0"
               >
-                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                 Delete code
               </Button>
             )}
@@ -179,7 +176,6 @@ export function StepCodesAndQuestions({
           />
         </div>
       )}
-
       <PdfPreviewDialog url={previewPdf} onClose={() => setPreviewPdf(null)} />
     </section>
   );

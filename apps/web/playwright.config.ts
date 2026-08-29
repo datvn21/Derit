@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * The dev server boots via `npm run dev` which uses Vite's default port
  * (5173). `baseURL` should resolve to the live URL regardless of which port
- * Vite actually picks — we let `webServer.url` drive that discovery.
+ * Vite actually picks - we let `webServer.url` drive that discovery.
  */
 export default defineConfig({
   testDir: "./tests/e2e",

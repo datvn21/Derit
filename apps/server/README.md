@@ -76,7 +76,7 @@ Server khởi động tại: `http://localhost:5001`
 
 ---
 
-## Docker — Sandbox thực thi code
+## Docker - Sandbox thực thi code
 
 Backend sử dụng Docker để chạy code của sinh viên trong môi trường cô lập (Java). Container pool được quản lý tự động.
 

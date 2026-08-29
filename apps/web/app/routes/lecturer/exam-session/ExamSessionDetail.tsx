@@ -20,7 +20,12 @@ import {
   BarChart2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatToLocalDateTime, stripUniversityDomain, STATUS_VARIANT_MAP, withUniversityDomain } from "./Detail/helpers";
+import {
+  formatToLocalDateTime,
+  stripUniversityDomain,
+  STATUS_VARIANT_MAP,
+  withUniversityDomain,
+} from "./Detail/helpers";
 import { recordRecentItem } from "~/lib/recents";
 
 export default function ExamSessionDetail() {
@@ -284,113 +289,123 @@ export default function ExamSessionDetail() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-card border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-card/95 backdrop-blur-xs">
+        <div className="relative mx-auto flex h-14 w-full max-w-6xl items-center justify-center px-4 sm:px-6">
+          <div className="absolute left-4 flex min-w-0 justify-start sm:left-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/lecturer/exam-sessions")}
+              className="h-8 rounded-md border border-border bg-muted/70 px-3 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+              Back
+            </Button>
+          </div>
+
+          <h1 className="min-w-0 max-w-[46vw] truncate text-center text-base font-semibold tracking-tight text-foreground sm:max-w-[56vw]">
+            {session.sessionName}
+          </h1>
+
+          <div className="absolute right-4 flex min-w-0 items-center justify-end gap-2 sm:right-6">
+            {/* View Results button */}
+            {(session.status === "ended" || session.status === "graded") && (
               <Button
-                variant="ghost"
-                onClick={() => navigate("/lecturer/exam-sessions")}
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  navigate(`/lecturer/exam-sessions/${id}/results`)
+                }
+                className="h-8 gap-1.5 text-xs font-medium"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                <BarChart2 className="w-3.5 h-3.5" />
+                Results
               </Button>
-              <div className="flex gap-3">
-                <h1 className="text-2xl font-bold text-foreground">
-                  {session.sessionName}
-                </h1>
-              </div>
-            </div>
+            )}
 
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              {/* View Results button */}
-              {(session.status === "ended" || session.status === "graded") && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    navigate(`/lecturer/exam-sessions/${id}/results`)
+            {canStart && (
+              <Button
+                size="sm"
+                onClick={() => startMutation.mutate()}
+                disabled={startMutation.isPending}
+                className="h-8 gap-1.5 text-xs font-medium"
+              >
+                <Play className="w-3.5 h-3.5" />
+                Start Session
+              </Button>
+            )}
+
+            {canEnd && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Are you sure you want to end this session? Students will no longer be able to submit.",
+                    )
+                  ) {
+                    endMutation.mutate();
                   }
-                  className="gap-1.5"
-                >
-                  <BarChart2 className="w-4 h-4" />
-                  Results
-                </Button>
-              )}
+                }}
+                disabled={endMutation.isPending}
+                className="h-8 gap-1.5 text-xs font-medium"
+              >
+                <div className="w-3 aspect-square rounded-xs bg-primary-foreground"></div>
+                End Session
+              </Button>
+            )}
 
-              {canStart && (
-                <Button
-                  onClick={() => startMutation.mutate()}
-                  disabled={startMutation.isPending}
-                >
-                  <Play className="w-4 h-4 mr-2" />
-                  Start Session
-                </Button>
-              )}
+            {canEdit && !isEditing && (
+              <Button
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                variant="outline"
+                className="h-8 gap-1.5 text-xs font-medium"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                Edit
+              </Button>
+            )}
 
-              {canEnd && (
+            {isEditing && (
+              <>
                 <Button
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "Are you sure you want to end this session? Students will no longer be able to submit.",
-                      )
-                    ) {
-                      endMutation.mutate();
-                    }
-                  }}
-                  disabled={endMutation.isPending}
+                  size="sm"
+                  onClick={handleUpdate}
+                  disabled={updateMutation.isPending}
+                  className="h-8 gap-1.5 text-xs font-medium"
                 >
-                  <div className="w-3.5 aspect-square rounded bg-primary-foreground"></div>
-                  End Session
+                  <Save className="w-3.5 h-3.5" />
+                  Save
                 </Button>
-              )}
-
-              {canEdit && !isEditing && (
                 <Button
-                  onClick={() => setIsEditing(true)}
+                  size="sm"
+                  onClick={() => setIsEditing(false)}
                   variant="outline"
+                  className="h-8 gap-1.5 text-xs font-medium"
                 >
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  Edit
+                  <X className="w-3.5 h-3.5" />
+                  Cancel
                 </Button>
-              )}
+              </>
+            )}
 
-              {isEditing && (
-                <>
-                  <Button
-                    onClick={handleUpdate}
-                    disabled={updateMutation.isPending}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save
-                  </Button>
-                  <Button
-                    onClick={() => setIsEditing(false)}
-                    variant="outline"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Cancel
-                  </Button>
-                </>
-              )}
-
-              {canDelete && (
-                <Button
-                  onClick={handleDelete}
-                  disabled={deleteMutation.isPending}
-                  variant="outline"
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
+            {canDelete && (
+              <Button
+                size="sm"
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                variant="outline"
+                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Info */}
           <div className="lg:col-span-2 space-y-6">
@@ -453,7 +468,9 @@ export default function ExamSessionDetail() {
                       className="mt-1 flex-1"
                     />
                   ) : (
-                    <p className="mt-1 text-foreground">{session.sessionName}</p>
+                    <p className="mt-1 text-foreground">
+                      {session.sessionName}
+                    </p>
                   )}
                 </div>
                 {/* Schedule */}
@@ -533,10 +550,10 @@ export default function ExamSessionDetail() {
                 </div>
 
                 {/* Whitelist */}
-                <div>
+                <div className="space-y-2">
                   <Label
                     htmlFor="whitelist"
-                    className="flex items-center gap-2 mb-3"
+                    className="text-xs font-semibold text-foreground block"
                   >
                     Whitelist
                   </Label>
@@ -547,10 +564,10 @@ export default function ExamSessionDetail() {
                       onChange={(e) => setWhitelist(e.target.value)}
                       placeholder="One email per line"
                       rows={4}
-                      className="mt-1 font-mono text-sm"
+                      className="font-mono text-sm"
                     />
                   ) : (
-                    <div className="mt-1">
+                    <div>
                       {session.whitelist?.length > 0 ? (
                         <div className="p-3 bg-muted rounded border border-border max-h-32 overflow-y-auto">
                           {session.whitelist.map((email: string, i: number) => (
@@ -572,10 +589,10 @@ export default function ExamSessionDetail() {
                 </div>
 
                 {/* Blacklist */}
-                <div>
+                <div className="space-y-2">
                   <Label
                     htmlFor="blacklist"
-                    className="flex items-center gap-2"
+                    className="text-xs font-semibold text-foreground block"
                   >
                     Blacklist
                   </Label>
@@ -586,10 +603,10 @@ export default function ExamSessionDetail() {
                       onChange={(e) => setBlacklist(e.target.value)}
                       placeholder="One email per line"
                       rows={3}
-                      className="mt-1 font-mono text-sm"
+                      className="font-mono text-sm"
                     />
                   ) : (
-                    <div className="mt-1">
+                    <div>
                       {session.blacklist?.length > 0 ? (
                         <div className="p-3 bg-muted rounded border border-border max-h-32 overflow-y-auto">
                           {session.blacklist.map((email: string, i: number) => (
@@ -622,8 +639,12 @@ export default function ExamSessionDetail() {
               </h2>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Entry Mode</span>
-                  <Badge variant={session.entryMode === "open" ? "success" : "info"}>
+                  <span className="text-sm text-muted-foreground">
+                    Entry Mode
+                  </span>
+                  <Badge
+                    variant={session.entryMode === "open" ? "success" : "info"}
+                  >
                     {session.entryMode === "open" ? "Open" : "Approval"}
                   </Badge>
                 </div>
@@ -696,7 +717,9 @@ export default function ExamSessionDetail() {
                         <p className="font-medium text-sm text-foreground">
                           {student.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">{student.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {student.email}
+                        </p>
                         {student.computerOrder != null && (
                           <p className="text-xs text-warning mt-0.5 font-medium">
                             Order: {student.computerOrder}

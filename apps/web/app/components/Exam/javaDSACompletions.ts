@@ -1,5 +1,5 @@
 /**
- * Java DSA Snippet Provider — registered once into Monaco.
+ * Java DSA Snippet Provider - registered once into Monaco.
  *
  * Covers the most common patterns for DSA exams:
  *   Scanner input, arrays, ArrayList, LinkedList, Stack, Queue,
@@ -132,7 +132,7 @@ export const JAVA_DSA_SNIPPETS: SnippetItem[] = [
     label: "stack",
     insertText: "Deque<${1:Integer}> ${2:stack} = new ArrayDeque<>();",
     detail: "Stack (Deque as stack)",
-    documentation: "Dùng Deque thay Stack — hiệu năng tốt hơn",
+    documentation: "Dùng Deque thay Stack - hiệu năng tốt hơn",
   },
   {
     label: "queue",
@@ -405,7 +405,7 @@ export const JAVA_DSA_SNIPPETS: SnippetItem[] = [
 
 /**
  * Registers the Java DSA completion provider into a Monaco instance.
- * Safe to call multiple times — tracks disposal via a module-level ref.
+ * Safe to call multiple times - tracks disposal via a module-level ref.
  */
 let _disposable: { dispose(): void } | null = null;
 

@@ -35,10 +35,13 @@ import {
   Share2,
   Loader2,
   MoreHorizontal,
+  Clock,
+  Globe,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useMemo } from "react";
+import { FileIcon } from "~/components/ui/file-icon";
 import {
   Dialog,
   DialogContent,
@@ -49,8 +52,17 @@ import {
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { ViewToggle, type ViewMode } from "~/components/ui/view-toggle";
 import { cn } from "~/lib/utils";
+import { EmptyState } from "~/components/ui/empty-state";
+import { ConfirmDeleteDialog } from "~/components/ui/confirm-delete-dialog";
 
 const EXAM_TYPES = ["OOP", "DSA", "General"] as const;
 const LANGUAGES = ["java", "python", "cpp"] as const;
@@ -110,6 +122,23 @@ export default function ExamTemplateList() {
     },
     onError: (error: any) => {
       const msg = error?.response?.data?.error || "Failed to share template";
+      toast.error(msg);
+    },
+  });
+
+  const togglePublishMutation = useMutation({
+    mutationFn: (templateId: string) =>
+      examTemplateAPI.togglePublish(templateId),
+    onSuccess: (res) => {
+      const isPub = res.data?.template?.isPublished;
+      toast.success(
+        isPub ? "Template published successfully" : "Template moved to draft",
+      );
+      queryClient.invalidateQueries({ queryKey: ["exam-templates"] });
+    },
+    onError: (error: any) => {
+      const msg =
+        error?.response?.data?.error || "Failed to update template status";
       toast.error(msg);
     },
   });
@@ -209,10 +238,32 @@ export default function ExamTemplateList() {
         {/* Results */}
         {filtered.length === 0 ? (
           <EmptyState
-            query={query}
-            hasFilter={hasActiveFilter}
-            onClear={clearFilters}
-            onCreate={() => navigate("/lecturer/exam-templates/create")}
+            icon={hasActiveFilter ? Search : FileText}
+            title={
+              hasActiveFilter ? "No matching templates" : "No templates yet"
+            }
+            description={
+              hasActiveFilter
+                ? query
+                  ? `No templates match "${query}".`
+                  : "No templates match the current filters."
+                : "Create your first exam template to get started."
+            }
+            action={
+              hasActiveFilter ? (
+                <Button variant="outline" onClick={clearFilters}>
+                  <X className="w-3.5 h-3.5 mr-1" />
+                  Clear filters
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => navigate("/lecturer/exam-templates/create")}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Template
+                </Button>
+              )
+            }
           />
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -222,6 +273,9 @@ export default function ExamTemplateList() {
                 template={template}
                 onEdit={() =>
                   navigate(`/lecturer/exam-templates/${template._id}/edit`)
+                }
+                onTogglePublish={() =>
+                  togglePublishMutation.mutate(template._id)
                 }
                 onShare={() =>
                   handleOpenShare(template._id, template.templateName)
@@ -236,11 +290,11 @@ export default function ExamTemplateList() {
           <Card className="overflow-hidden shadow-none">
             <Table>
               <TableHeader className="hidden md:table-header-group">
-                <TableRow>
-                  <TableHead>Template</TableHead>
-                  <TableHead className="w-28">Type</TableHead>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="min-w-[280px]">Template</TableHead>
+                  <TableHead className="w-24">Type</TableHead>
+                  <TableHead className="w-32">Language</TableHead>
                   <TableHead className="w-24">Codes</TableHead>
-                  <TableHead className="w-28">Language</TableHead>
                   <TableHead className="w-28">Duration</TableHead>
                   <TableHead className="w-28">Status</TableHead>
                   <TableHead className="w-28 text-right">Actions</TableHead>
@@ -253,6 +307,9 @@ export default function ExamTemplateList() {
                     template={template}
                     onEdit={() =>
                       navigate(`/lecturer/exam-templates/${template._id}/edit`)
+                    }
+                    onTogglePublish={() =>
+                      togglePublishMutation.mutate(template._id)
                     }
                     onShare={() =>
                       handleOpenShare(template._id, template.templateName)
@@ -269,46 +326,19 @@ export default function ExamTemplateList() {
       </div>
 
       {/* Delete Confirm Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-destructive">
-              Delete Template
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete{" "}
-              <strong>"{deleteTargetName}"</strong>? This action cannot be
-              undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              disabled={deleteMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Template"
+        description={
+          <>
+            Are you sure you want to delete{" "}
+            <strong>"{deleteTargetName}"</strong>? This action cannot be undone.
+          </>
+        }
+        onConfirm={handleConfirmDelete}
+        isDeleting={deleteMutation.isPending}
+      />
 
       {/* Share Dialog */}
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
@@ -418,87 +448,63 @@ function TemplateToolbar({
             )}
           </div>
 
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto lg:overflow-visible">
-              <FilterPills
-                label="Type"
-                options={[...EXAM_TYPES]}
-                value={typeFilter}
-                onChange={onTypeFilterChange}
-              />
-              <FilterPills
-                label="Language"
-                options={[...LANGUAGES]}
-                value={languageFilter}
-                onChange={onLanguageFilterChange}
-              />
-              <FilterPills
-                label="Status"
-                options={["published", "draft"]}
-                value={statusFilter === "all" ? null : statusFilter}
-                onChange={(v) =>
-                  onStatusFilterChange((v ?? "all") as typeof statusFilter)
-                }
-                format={(s) => (s === "published" ? "Published" : "Draft")}
-              />
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Type Filter */}
+            <Select
+              value={typeFilter ?? "all"}
+              onValueChange={(v) => onTypeFilterChange(v === "all" ? null : v)}
+            >
+              <SelectTrigger className="w-[125px] h-9" aria-label="Filter by exam type">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {EXAM_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Language Filter */}
+            <Select
+              value={languageFilter ?? "all"}
+              onValueChange={(v) => onLanguageFilterChange(v === "all" ? null : v)}
+            >
+              <SelectTrigger className="w-[135px] h-9" aria-label="Filter by programming language">
+                <SelectValue placeholder="All Languages" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Languages</SelectItem>
+                {LANGUAGES.map((l) => (
+                  <SelectItem key={l} value={l} className="capitalize">
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Status Filter */}
+            <Select
+              value={statusFilter}
+              onValueChange={(v) =>
+                onStatusFilterChange(v as "all" | "published" | "draft")
+              }
+            >
+              <SelectTrigger className="w-[125px] h-9" aria-label="Filter by status">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                Filter pills                                */
-/* -------------------------------------------------------------------------- */
-
-function FilterPills<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-  format,
-}: {
-  label: string;
-  options: readonly T[];
-  value: T | null;
-  onChange: (v: T | null) => void;
-  format?: (s: T) => string;
-}) {
-  return (
-    <div className="inline-flex shrink-0 items-center gap-1.5">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <div className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
-        <button
-          type="button"
-          onClick={() => onChange(null)}
-          className={cn(
-            "h-8 rounded-md px-4 text-xs font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            value === null
-              ? "bg-primary text-white shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          All
-        </button>
-        {options.map((opt) => (
-          <button
-            key={opt}
-            type="button"
-            onClick={() => onChange(value === opt ? null : opt)}
-            className={cn(
-              "h-8 rounded-md px-4 text-xs font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              value === opt
-                ? "bg-primary text-white shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {format ? format(opt) : opt}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -509,55 +515,88 @@ function FilterPills<T extends string>({
 function TemplateCard({
   template,
   onEdit,
+  onTogglePublish,
   onShare,
   onDelete,
 }: {
   template: any;
   onEdit: () => void;
+  onTogglePublish?: () => void;
   onShare: () => void;
   onDelete: () => void;
 }) {
   const codeCount = template.examCodeCount || template.examCodes?.length || 0;
 
   return (
-    <Card className="group shadow-none transition-colors hover:border-foreground/20">
-      <CardHeader className="flex-row items-start justify-between gap-3 p-5 pb-3">
-        <div className="min-w-0 space-y-2">
-          <h3 className="truncate font-semibold leading-tight text-foreground">
-            {template.templateName}
-          </h3>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="default">{template.examType}</Badge>
-            {template.isPublished ? (
-              <Badge variant="success">Published</Badge>
-            ) : (
-              <Badge variant="default">Draft</Badge>
-            )}
+    <Card className="group flex flex-col justify-between shadow-none transition-colors hover:border-foreground/20 rounded-xl min-h-[210px]">
+      <div>
+        <CardHeader className="flex-row items-start justify-between gap-3 p-5 pb-3">
+          <div className="flex items-start gap-3.5 min-w-0 flex-1">
+            {/* Language Icon Chip */}
+            <div className="w-10 h-10 rounded-xl bg-muted/60 flex items-center justify-center shrink-0 border border-border/60 p-2">
+              <FileIcon
+                language={template.language}
+                className="w-5 h-5 object-contain"
+              />
+            </div>
+
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <h3
+                className="font-semibold text-base leading-snug text-foreground line-clamp-1"
+                title={template.templateName}
+              >
+                {template.templateName}
+              </h3>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Badge variant="primary" className="text-[11px] px-2 py-0.5">
+                  {template.examType}
+                </Badge>
+                {template.isPublished ? (
+                  <Badge variant="success" className="text-[11px] px-2 py-0.5">
+                    Published
+                  </Badge>
+                ) : (
+                  <Badge variant="default" className="text-[11px] px-2 py-0.5">
+                    Draft
+                  </Badge>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-        <TemplateActions onShare={onShare} onDelete={onDelete} />
-      </CardHeader>
 
-      <CardContent className="p-5 pt-0">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <FileText className="h-4 w-4" />
-          <span className="truncate">
-            {codeCount} exam code{codeCount === 1 ? "" : "s"} ·{" "}
-            <span className="capitalize">{template.language}</span> ·{" "}
-            {template.duration} min
-          </span>
-        </div>
-      </CardContent>
+          <TemplateActions
+            isPublished={template.isPublished}
+            onTogglePublish={onTogglePublish}
+            onShare={onShare}
+            onDelete={onDelete}
+          />
+        </CardHeader>
 
-      <CardFooter className="border-t border-border p-3">
+        <CardContent className="px-5 py-3 space-y-2.5">
+          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground/70" />
+              <span>{template.duration} mins</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-muted-foreground/70" />
+              <span>
+                {codeCount} exam code{codeCount !== 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </div>
+
+      <CardFooter className="border-t border-border p-3.5 bg-muted/10 mt-auto">
         <Button
           variant="outline"
           size="sm"
           onClick={onEdit}
-          className="w-full justify-center"
+          className="w-full justify-center text-xs h-8.5 font-medium"
         >
-          <Edit className="w-3.5 h-3.5 mr-1" />
-          Edit
+          <Edit className="w-3.5 h-3.5 mr-1.5" />
+          Edit Template
         </Button>
       </CardFooter>
     </Card>
@@ -571,11 +610,13 @@ function TemplateCard({
 function TemplateListRow({
   template,
   onEdit,
+  onTogglePublish,
   onShare,
   onDelete,
 }: {
   template: any;
   onEdit: () => void;
+  onTogglePublish?: () => void;
   onShare: () => void;
   onDelete: () => void;
 }) {
@@ -583,12 +624,12 @@ function TemplateListRow({
 
   return (
     <TableRow>
-      <TableCell className="min-w-[260px]">
+      <TableCell className="min-w-[280px]">
         <div className="min-w-0">
           <p className="truncate font-medium text-foreground">
             {template.templateName}
           </p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground md:hidden">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground md:hidden">
             <span>
               {codeCount} code{codeCount === 1 ? "" : "s"}
             </span>
@@ -597,8 +638,8 @@ function TemplateListRow({
             <span aria-hidden="true">·</span>
             <span>{template.duration} min</span>
           </div>
-          <div className="mt-2 flex items-center gap-2 md:hidden">
-            <Badge variant="default">{template.examType}</Badge>
+          <div className="mt-1.5 flex items-center gap-2 md:hidden">
+            <Badge variant="primary">{template.examType}</Badge>
             {template.isPublished ? (
               <Badge variant="success">Published</Badge>
             ) : (
@@ -608,13 +649,19 @@ function TemplateListRow({
         </div>
       </TableCell>
       <TableCell className="hidden md:table-cell">
-        <Badge variant="default">{template.examType}</Badge>
+        <Badge variant="primary">{template.examType}</Badge>
+      </TableCell>
+      <TableCell className="hidden text-muted-foreground md:table-cell">
+        <span className="inline-flex items-center gap-1.5 capitalize text-xs font-medium text-foreground">
+          <FileIcon
+            language={template.language}
+            className="w-4 h-4 object-contain"
+          />
+          {template.language}
+        </span>
       </TableCell>
       <TableCell className="hidden text-muted-foreground md:table-cell">
         {codeCount}
-      </TableCell>
-      <TableCell className="hidden capitalize text-muted-foreground md:table-cell">
-        {template.language}
       </TableCell>
       <TableCell className="hidden text-muted-foreground md:table-cell">
         {template.duration} min
@@ -632,7 +679,12 @@ function TemplateListRow({
             <Edit className="w-3 h-3 mr-1" />
             Edit
           </Button>
-          <TemplateActions onShare={onShare} onDelete={onDelete} />
+          <TemplateActions
+            isPublished={template.isPublished}
+            onTogglePublish={onTogglePublish}
+            onShare={onShare}
+            onDelete={onDelete}
+          />
         </div>
       </TableCell>
     </TableRow>
@@ -640,9 +692,13 @@ function TemplateListRow({
 }
 
 function TemplateActions({
+  isPublished,
+  onTogglePublish,
   onShare,
   onDelete,
 }: {
+  isPublished?: boolean;
+  onTogglePublish?: () => void;
   onShare: () => void;
   onDelete: () => void;
 }) {
@@ -659,66 +715,30 @@ function TemplateActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
+        {onTogglePublish && (
+          <DropdownMenuItem onClick={onTogglePublish}>
+            {isPublished ? (
+              <>
+                <FileText className="h-4 w-4 mr-2" />
+                Make draft
+              </>
+            ) : (
+              <>
+                <Globe className="h-4 w-4 mr-2" />
+                Publish
+              </>
+            )}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={onShare}>
-          <Share2 className="h-4 w-4" />
+          <Share2 className="h-4 w-4 mr-2" />
           Share
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onDelete} variant="destructive">
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4 mr-2" />
           Delete
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                Empty state                                 */
-/* -------------------------------------------------------------------------- */
-
-function EmptyState({
-  query,
-  hasFilter,
-  onClear,
-  onCreate,
-}: {
-  query: string;
-  hasFilter: boolean;
-  onClear: () => void;
-  onCreate: () => void;
-}) {
-  if (hasFilter) {
-    return (
-      <div className="bg-card border border-border rounded-lg p-12 text-center">
-        <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-        <h3 className="text-lg font-medium text-foreground mb-1">
-          No matching templates
-        </h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          {query
-            ? `No templates match "${query}".`
-            : "No templates match the current filters."}
-        </p>
-        <Button variant="outline" onClick={onClear}>
-          <X className="w-3.5 h-3.5 mr-1" />
-          Clear filters
-        </Button>
-      </div>
-    );
-  }
-  return (
-    <div className="bg-card border border-border rounded-lg p-12 text-center">
-      <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-      <h3 className="text-lg font-medium text-foreground mb-1">
-        No templates yet
-      </h3>
-      <p className="text-sm text-muted-foreground mb-4">
-        Create your first exam template to get started.
-      </p>
-      <Button onClick={onCreate}>
-        <Plus className="w-4 h-4 mr-2" />
-        Create Template
-      </Button>
-    </div>
   );
 }

@@ -72,7 +72,7 @@ export default function ExamHeader({
   }, [initialRemainingMs, onSubmit]);
 
   return (
-    <header className="bg-background border-b border-border shadow-xs z-10">
+    <header className="bg-background border-b border-border z-10">
       <div className="px-5 h-14 flex items-center justify-between gap-4">
         {/* ── Left: brand + exam info ── */}
         <div className="flex items-center gap-3 min-w-0 flex-1 basis-0">

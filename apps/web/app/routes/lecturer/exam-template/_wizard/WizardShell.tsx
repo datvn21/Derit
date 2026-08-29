@@ -1,5 +1,5 @@
 /**
- * WizardShell — orchestrates step navigation, persistence of the active
+ * WizardShell - orchestrates step navigation, persistence of the active
  * step (per-code / per-question), and the submit pipeline (PDF upload
  * retry + mutation).
  *
@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { X } from "lucide-react";
+import { Save, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
 import { uploadAPI } from "~/lib/api";
@@ -27,17 +27,21 @@ export interface WizardShellProps {
   title: string;
   backHref: string;
   state: UseTemplateStateResult;
-  submit: (payload: {
-    templateName: string;
-    examType: string;
-    language: string;
-    duration: number;
-    examCodes: Array<{
-      codeNumber: string;
-      pdfUrl: string;
-      questions: unknown[];
-    }>;
-  }) => Promise<void>;
+  submit: (
+    payload: {
+      templateName: string;
+      examType: string;
+      language: string;
+      duration: number;
+      isPublished?: boolean;
+      examCodes: Array<{
+        codeNumber: string;
+        pdfUrl: string;
+        questions: unknown[];
+      }>;
+    },
+    options?: { isDraft?: boolean },
+  ) => Promise<void>;
   isSubmitting: boolean;
   submitLabel: string;
 }
@@ -101,16 +105,25 @@ export function WizardShell({
 
   const onPrimaryAction = () => {
     if (isLast) {
-      void handleSubmit();
+      void handleSave(false);
     } else {
       const next = STEPS[stepIndex + 1];
       if (next) goTo(next.id);
     }
   };
 
-  const handleSubmit = async () => {
-    // 1. Upload any pending PDF files (with retry + progress toasts).
+  const handleSave = async (isDraft: boolean) => {
+    if (!state.meta.templateName.trim()) {
+      toast.error("Please enter a template name before saving");
+      return;
+    }
+    if (state.examCodes.length === 0) {
+      toast.error("At least one exam code is required");
+      return;
+    }
+
     try {
+      // 1. Upload any pending PDF files (with retry + progress toasts).
       const processed = [...state.examCodes];
       const uploads = processed.map(async (code, i) => {
         if (!code.pdfFile) return { index: i, url: code.pdfUrl };
@@ -153,21 +166,25 @@ export function WizardShell({
           processed[index].pdfUrl = url;
         });
       } catch {
-        return; // Stop — toast already shown.
+        return; // Stop - toast already shown.
       }
 
       // 2. Submit payload with uploaded URLs.
-      await submit({
-        templateName: state.meta.templateName,
-        examType: state.meta.examType,
-        language: state.meta.language,
-        duration: state.meta.duration,
-        examCodes: processed.map((c) => ({
-          codeNumber: c.codeNumber,
-          pdfUrl: c.pdfUrl,
-          questions: c.questions,
-        })),
-      });
+      await submit(
+        {
+          templateName: state.meta.templateName,
+          examType: state.meta.examType,
+          language: state.meta.language,
+          duration: state.meta.duration,
+          isPublished: !isDraft,
+          examCodes: processed.map((c) => ({
+            codeNumber: c.codeNumber,
+            pdfUrl: c.pdfUrl,
+            questions: c.questions,
+          })),
+        },
+        { isDraft },
+      );
     } catch (err) {
       console.error(err);
       toast.error("An unexpected error occurred");
@@ -191,7 +208,7 @@ export function WizardShell({
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border/80 bg-card/95">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-card/95 backdrop-blur-xs">
         <div className="relative mx-auto flex h-14 w-full max-w-6xl items-center justify-center px-4 sm:px-6">
           <div className="absolute left-4 flex min-w-0 justify-start sm:left-6">
             <Button
@@ -208,13 +225,25 @@ export function WizardShell({
             {title}
           </h1>
 
-          <div className="absolute right-6 hidden min-w-0 rounded-md border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground sm:flex">
-            Step {stepIndex + 1} of {STEPS.length}
+          <div className="absolute right-4 flex items-center gap-2 sm:right-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleSave(true)}
+              disabled={isSubmitting}
+              className="h-8 rounded-md px-3 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              <Save className="mr-1.5 h-3.5 w-3.5" />
+              Save draft
+            </Button>
+            <div className="hidden min-w-0 rounded-md border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground sm:flex">
+              Step {stepIndex + 1} of {STEPS.length}
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8 flex flex-col gap-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-6 pt-8 pb-24 flex flex-col gap-6">
         <StepIndicator
           activeStep={step}
           visited={visited}
@@ -236,30 +265,36 @@ export function WizardShell({
             state={state}
             onJumpTo={goTo}
             isSubmitting={isSubmitting}
-            onSubmit={handleSubmit}
+            onSubmit={() => void handleSave(false)}
+            onSaveDraft={() => void handleSave(true)}
             submitLabel={submitLabel}
           />
         )}
+      </main>
 
-        {/* Bottom nav (only when not on Review — Review has its own submit). */}
-        {!isLast && (
-          <div className="sticky bottom-4 z-20 -mx-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/80 bg-card/95 px-3 py-2.5 sm:-mx-1 sm:px-4">
+      {/* Floating bottom navigation toolbar */}
+      {!isLast && (
+        <div className="fixed bottom-6 left-64 right-0 z-30 pointer-events-none flex justify-center px-4 sm:px-6">
+          <div className="pointer-events-auto max-w-6xl w-full flex items-center justify-between gap-3 rounded-xl border border-border bg-card/95 backdrop-blur-xs px-4 py-2.5 shadow-sm">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => {
                 const prev = STEPS[stepIndex - 1];
                 if (prev) goTo(prev.id);
               }}
               disabled={isFirst}
+              className="h-8 min-w-20 shrink-0"
             >
               Previous
             </Button>
+
             {step === "codes" && (
               <select
                 value={quickTarget}
                 onChange={(event) => jumpToEditorItem(event.target.value)}
                 aria-label="Jump to question or test case"
-                className="order-last min-w-0 w-full rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] sm:order-none sm:mx-4 sm:w-auto sm:max-w-[18rem] sm:flex-1 sm:text-sm"
+                className="h-8 max-w-xs flex-1 rounded-md border border-border bg-background px-3 text-xs text-foreground outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] cursor-pointer"
               >
                 <option value="">Jump to question or test case</option>
                 {state.examCodes.map((code, codeIndex) => (
@@ -289,19 +324,27 @@ export function WizardShell({
                 ))}
               </select>
             )}
-            <span
-              title={nextTooltip}
-              tabIndex={nextDisabled ? 0 : undefined}
-              aria-label={nextTooltip}
-              className={nextDisabled ? "cursor-not-allowed" : undefined}
-            >
-              <Button onClick={onPrimaryAction} disabled={nextDisabled}>
-                Next
-              </Button>
-            </span>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <span
+                title={nextTooltip}
+                tabIndex={nextDisabled ? 0 : undefined}
+                aria-label={nextTooltip}
+                className={nextDisabled ? "cursor-not-allowed" : undefined}
+              >
+                <Button
+                  size="sm"
+                  onClick={onPrimaryAction}
+                  disabled={nextDisabled}
+                  className="h-8 min-w-20"
+                >
+                  Next
+                </Button>
+              </span>
+            </div>
           </div>
-        )}
-      </main>
+        </div>
+      )}
     </div>
   );
 }

@@ -54,11 +54,11 @@ const queryClient = new QueryClient();
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster 
-        position="top-right" 
+      <Toaster
+        position="top-right"
         toastOptions={{
-          className: "border border-gray-200 shadow-lg font-sans text-gray-900"
-        }} 
+          className: "border border-border font-sans text-foreground",
+        }}
       />
       <Outlet />
     </QueryClientProvider>

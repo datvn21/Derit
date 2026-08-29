@@ -1,5 +1,5 @@
 /**
- * `useTemplateState` — single source of truth for the wizard's mutable
+ * `useTemplateState` - single source of truth for the wizard's mutable
  * template payload (info + codes + questions + test cases + starter files).
  *
  * Both Create and Edit use this hook; the reducer-style API keeps

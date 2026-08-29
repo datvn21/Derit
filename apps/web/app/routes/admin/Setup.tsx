@@ -28,7 +28,7 @@ export default function Setup() {
       .then((res) => {
         setUser(res.data);
         setIsLoading(false);
-        
+
         // Check if user is admin
         if (res.data.role !== "admin" && !res.data.isSuperAdmin) {
           navigate("/");
@@ -51,8 +51,7 @@ export default function Setup() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
       <div className="max-w-2xl w-full">
         {step === "welcome" && (
-          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-            {/* Header */}
+          <div className="bg-white rounded-2xl border border-border overflow-hidden">
             <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-8 text-center">
               <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-full mb-4">
                 <Crown className="w-10 h-10 text-white" />
@@ -128,7 +127,7 @@ export default function Setup() {
         )}
 
         {step === "done" && (
-          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+          <div className="bg-white rounded-2xl border border-border overflow-hidden">
             {/* Success Header */}
             <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-8 text-center">
               <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-full mb-4">

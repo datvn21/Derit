@@ -7,7 +7,7 @@
  *   - the top brand-mark + role label,
  *   - the active-state nav,
  *   - the user avatar dropdown with logout.
- * Pages must NOT roll their own header — doing so duplicates chrome
+ * Pages must NOT roll their own header - doing so duplicates chrome
  * and breaks the layout (see screenshot bug 2026-07-23).
  *
  * Status differentiation is carried by the `Badge` primitive, not by
@@ -40,16 +40,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Badge } from "~/components/ui/badge";
 import { PageLoading } from "~/components/ui/page-loading";
-import AuthenticatedShell, { type NavItem } from "~/components/AuthenticatedShell";
 import { toast } from "sonner";
-
-// Dashboard + History. The Exam route (`/student/exam/:sessionId`) is a
-// workspace accessed via room code, not via sidebar nav — keeping it out
-// of the nav avoids a sidebar entry that points to a non-listing page.
-const studentNavigation: NavItem[] = [
-  { name: "Dashboard", href: "/student", icon: Gauge, exact: true },
-  { name: "History", href: "/student/history", icon: History },
-];
 
 function statusBadgeFor(exam: any) {
   if (exam.isSubmitted) return <Badge variant="destructive">Submitted</Badge>;
@@ -59,7 +50,8 @@ function statusBadgeFor(exam: any) {
         <Loader2Icon className="h-3 w-3 animate-spin" /> Pending Approval
       </Badge>
     );
-  if (exam.status === "ongoing") return <Badge variant="success">Ongoing</Badge>;
+  if (exam.status === "ongoing")
+    return <Badge variant="success">Ongoing</Badge>;
   return <Badge variant="info">Scheduled</Badge>;
 }
 
@@ -111,7 +103,11 @@ export default function StudentDashboard() {
     }
 
     if (!selectedExam.hasComputerOrder) {
-      if (!computerOrder || isNaN(Number(computerOrder)) || Number(computerOrder) < 1) {
+      if (
+        !computerOrder ||
+        isNaN(Number(computerOrder)) ||
+        Number(computerOrder) < 1
+      ) {
         setError("Please enter a valid computer order number");
         return;
       }
@@ -121,16 +117,23 @@ export default function StudentDashboard() {
     setError("");
 
     try {
-      const response = await examSessionAPI.joinWaitingList(selectedExam.roomCode, {
-        computerOrder: selectedExam.hasComputerOrder ? undefined : Number(computerOrder),
-        accessKey: accessKey.trim(),
-      });
+      const response = await examSessionAPI.joinWaitingList(
+        selectedExam.roomCode,
+        {
+          computerOrder: selectedExam.hasComputerOrder
+            ? undefined
+            : Number(computerOrder),
+          accessKey: accessKey.trim(),
+        },
+      );
       const { directEntry, sessionId } = response.data;
 
       if (directEntry) {
         navigate(`/student/exam/${sessionId}`);
       } else {
-        toast.success("Joined waiting list. Please wait for lecturer approval.");
+        toast.success(
+          "Joined waiting list. Please wait for lecturer approval.",
+        );
         setSelectedExam(null);
         refetchExams();
       }
@@ -160,7 +163,8 @@ export default function StudentDashboard() {
       }
     } catch (err: any) {
       setSearchError(
-        err.response?.data?.error || "Exam not found. Please check the room code.",
+        err.response?.data?.error ||
+          "Exam not found. Please check the room code.",
       );
     } finally {
       setIsSearching(false);
@@ -168,129 +172,122 @@ export default function StudentDashboard() {
   };
 
   return (
-    <AuthenticatedShell navigation={studentNavigation} roleLabel="Student">
-      <div className="flex flex-col gap-8 p-6 max-w-5xl mx-auto w-full">
-        {/* Page heading (shell owns brand + user-menu; this is just title) */}
-        <header>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">
-            Welcome, {user.name}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Join an exam by room code or pick from the list below.
-          </p>
-        </header>
+    <div className="flex flex-col gap-8 p-6 max-w-5xl mx-auto w-full">
+      {/* Page heading (shell owns brand + user-menu; this is just title) */}
+      <header>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+          Welcome, {user.name}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Join an exam by room code or pick from the list below.
+        </p>
+      </header>
 
-        {/* Room Code Search */}
-        <section className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-base font-semibold text-foreground mb-4">
-            Join by Room Code
+      {/* Room Code Search */}
+      <section className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-base font-semibold text-foreground mb-4">
+          Join by Room Code
+        </h2>
+
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              placeholder="Enter room code"
+              value={roomCode}
+              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchByRoomCode()}
+              className="text-base tracking-wider h-10"
+            />
+          </div>
+          <Button
+            onClick={handleSearchByRoomCode}
+            disabled={isSearching || !roomCode.trim()}
+            size="default"
+          >
+            {isSearching ? (
+              <Loader2Icon className="h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4" />
+            )}
+            Search
+          </Button>
+        </div>
+        {searchError && (
+          <div className="mt-3 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded text-sm">
+            {searchError}
+          </div>
+        )}
+      </section>
+
+      {/* Available Exams */}
+      <section className="rounded-xl border border-border bg-card p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-base font-semibold text-foreground">
+            Available Exams
           </h2>
 
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Input
-                placeholder="Enter room code"
-                value={roomCode}
-                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === "Enter" && handleSearchByRoomCode()}
-                className="text-base tracking-wider h-10"
-              />
-            </div>
-            <Button
-              onClick={handleSearchByRoomCode}
-              disabled={isSearching || !roomCode.trim()}
-              size="default"
-            >
-              {isSearching ? (
-                <Loader2Icon className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
-              Search
-            </Button>
+          <Button variant="ghost" size="sm" onClick={() => refetchExams()}>
+            {isFetching ? (
+              <Loader2Icon className="mr-1 h-4 w-4 animate-spin" />
+            ) : null}
+            Reload
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2Icon className="animate-spin h-10 w-10 text-muted-foreground" />
           </div>
-          {searchError && (
-            <div className="mt-3 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded text-sm">
-              {searchError}
-            </div>
-          )}
-        </section>
-
-        {/* Available Exams */}
-        <section className="rounded-xl border border-border bg-card p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-base font-semibold text-foreground">
-              Available Exams
-            </h2>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => refetchExams()}
-            >
-              {isFetching ? (
-                <Loader2Icon className="mr-1 h-4 w-4 animate-spin" />
-              ) : null}
-              Reload
-            </Button>
+        ) : availableExams.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-base font-medium text-muted-foreground">
+              No exams available
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              New exams will appear here once a lecturer schedules them.
+            </p>
           </div>
-
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2Icon className="animate-spin h-10 w-10 text-muted-foreground" />
-            </div>
-          ) : availableExams.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-base font-medium text-muted-foreground">
-                No exams available
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                New exams will appear here once a lecturer schedules them.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {availableExams.map((exam: any) => (
-                <button
-                  key={exam._id}
-                  type="button"
-                  onClick={() => {
-                    if (!exam.isSubmitted) setSelectedExam(exam);
-                  }}
-                  disabled={exam.isSubmitted}
-                  className={`group w-full text-left flex items-start gap-4 p-4 rounded-lg border transition-[border-color,background-color] duration-(--motion-fast) ease-(--motion-ease) ${
-                    exam.isSubmitted
-                      ? "border-border bg-muted opacity-60 cursor-not-allowed"
-                      : "border-border bg-card hover:border-foreground/20 hover:bg-muted/50 cursor-pointer"
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h3 className="font-semibold text-base text-foreground">
-                        {exam.sessionName}
-                      </h3>
-                      {statusBadgeFor(exam)}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {exam.examTemplateId?.examName}
-                    </p>
-                    <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
-                      <span>
-                        Duration: {exam.examTemplateId?.duration} minutes
-                      </span>
-                      <span>Teacher: {exam.createdBy?.name || "Unknown"}</span>
-                      <span>
-                        Start:{" "}
-                        {new Date(exam.startTime).toLocaleString()}
-                      </span>
-                    </div>
+        ) : (
+          <div className="space-y-3">
+            {availableExams.map((exam: any) => (
+              <button
+                key={exam._id}
+                type="button"
+                onClick={() => {
+                  if (!exam.isSubmitted) setSelectedExam(exam);
+                }}
+                disabled={exam.isSubmitted}
+                className={`group w-full text-left flex items-start gap-4 p-4 rounded-lg border transition-[border-color,background-color] duration-(--motion-fast) ease-(--motion-ease) ${
+                  exam.isSubmitted
+                    ? "border-border bg-muted opacity-60 cursor-not-allowed"
+                    : "border-border bg-card hover:border-foreground/20 hover:bg-muted/50 cursor-pointer"
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <h3 className="font-semibold text-base text-foreground">
+                      {exam.sessionName}
+                    </h3>
+                    {statusBadgeFor(exam)}
                   </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {exam.examTemplateId?.examName}
+                  </p>
+                  <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
+                    <span>
+                      Duration: {exam.examTemplateId?.duration} minutes
+                    </span>
+                    <span>Teacher: {exam.createdBy?.name || "Unknown"}</span>
+                    <span>
+                      Start: {new Date(exam.startTime).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Join Exam Dialog */}
       <Dialog
@@ -320,13 +317,13 @@ export default function StudentDashboard() {
                   </div>
                   <div className="text-muted-foreground text-sm flex items-center justify-between gap-2">
                     <span>End Time</span>
-                    <span>{new Date(selectedExam.endTime).toLocaleString()}</span>
+                    <span>
+                      {new Date(selectedExam.endTime).toLocaleString()}
+                    </span>
                   </div>
                   <div className="text-muted-foreground text-sm flex items-center justify-between gap-2">
                     <span>Duration</span>
-                    <span>
-                      {selectedExam.examTemplateId?.duration} minutes
-                    </span>
+                    <span>{selectedExam.examTemplateId?.duration} minutes</span>
                   </div>
                   <div className="text-muted-foreground text-sm flex items-center justify-between gap-2">
                     <span>Author</span>
@@ -394,6 +391,6 @@ export default function StudentDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AuthenticatedShell>
+    </div>
   );
 }

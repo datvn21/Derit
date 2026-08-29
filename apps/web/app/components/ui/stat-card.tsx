@@ -1,5 +1,5 @@
 /**
- * StatCard — a small KPI tile used on lecturer/admin dashboards.
+ * StatCard - a small KPI tile used on lecturer/admin dashboards.
  *
  * Monochrome by design (see audit C1): a single accent-tinted icon chip
  * and one optional status badge. Status differentiation is carried by the
@@ -50,10 +50,7 @@ export function StatCard({
     >
       <div className="flex justify-between items-start mb-4">
         <div
-          className={cn(
-            "p-2 rounded-lg",
-            isMuted ? "bg-muted" : "bg-accent",
-          )}
+          className={cn("p-2 rounded-lg", isMuted ? "bg-muted" : "bg-accent")}
         >
           <Icon
             className={cn(

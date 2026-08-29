@@ -1,12 +1,12 @@
 /**
- * `useAutosave` — debounced, page-lifecycle-safe autosave for the exam
+ * `useAutosave` - debounced, page-lifecycle-safe autosave for the exam
  * editor. Wraps `beaconAutosave` from `examUtils` so the keepalive logic
  * stays where it can be unit-tested.
  *
  * Behaviour:
  *  - Each call to `schedule(content)` debounces a beacon write so rapid
  *    typing only flushes one request every `intervalMs`.
- *  - `flushNow()` triggers an immediate write — used before unload / route
+ *  - `flushNow()` triggers an immediate write - used before unload / route
  *    transitions.
  *  - The interval timer is also flushed on `pagehide` / `beforeunload` to
  *    avoid losing the last keystrokes when the user navigates away.

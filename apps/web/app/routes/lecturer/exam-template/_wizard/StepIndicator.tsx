@@ -1,5 +1,5 @@
 /**
- * Wizard step indicator — shows progress and lets the user click any
+ * Wizard step indicator - shows progress and lets the user click any
  * step to jump to it (forward jumps only become available once prior
  * steps are valid). Also displays per-step validation state.
  */
@@ -49,9 +49,7 @@ export function StepIndicator({
                   canJump && !isActive && "cursor-pointer hover:bg-muted",
                   !canJump && "cursor-not-allowed",
                   isActive && "border-primary bg-primary/5",
-                  isActive &&
-                    validation.ok &&
-                    "border-primary bg-primary/5 shadow-sm",
+                  isActive && validation.ok && "border-primary bg-primary/5",
                 )}
               >
                 <div className="flex items-center gap-3">

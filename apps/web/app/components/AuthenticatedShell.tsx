@@ -1,5 +1,5 @@
 /**
- * AuthenticatedShell — shared layout chrome used by lecturer/admin/student
+ * AuthenticatedShell - shared layout chrome used by lecturer/admin/student
  * apps. Replaces two near-identical sidebar implementations (lecturer and
  * admin) with one configurable `AppSidebar`. Pages should not roll their
  * own sidebar markup.
@@ -28,6 +28,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import {
   CalendarDays,
+  ChevronsUpDown,
   FileText,
   GraduationCap,
   LogOut,
@@ -35,6 +36,7 @@ import {
   Users,
 } from "lucide-react";
 import Logo from "~/components/Logo";
+import { Badge } from "~/components/ui/badge";
 import { PageLoading } from "~/components/ui/page-loading";
 import { cn } from "~/lib/utils";
 import { useAuth } from "~/hooks/useAuth";
@@ -86,7 +88,8 @@ export default function AuthenticatedShell({
     const updateRecents = () => setRecentItems(getRecentItems());
     updateRecents();
     window.addEventListener(RECENTS_UPDATED_EVENT, updateRecents);
-    return () => window.removeEventListener(RECENTS_UPDATED_EVENT, updateRecents);
+    return () =>
+      window.removeEventListener(RECENTS_UPDATED_EVENT, updateRecents);
   }, [isLecturer]);
 
   if (isLoading || !user) {
@@ -205,60 +208,97 @@ export default function AuthenticatedShell({
           )}
         </nav>
 
-        <div className="border-t border-sidebar-border bg-sidebar">
-          <div className="flex items-center justify-center p-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex gap-3 items-center w-full cursor-pointer hover:bg-muted p-2 rounded-lg justify-center transition-[background-color] duration-(--motion-fast) ease-(--motion-ease)"
-                >
+        <div className="border-t border-sidebar-border bg-sidebar p-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="User account menu"
+                className="group flex items-center justify-between gap-2.5 w-full p-2 rounded-xl text-left hover:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
                   {user.avatar ? (
                     <img
                       src={user.avatar}
                       alt={user.name}
-                      className="w-9 h-9 rounded-full object-cover border-2 border-sidebar-border"
+                      className="w-8 h-8 rounded-full object-cover border border-sidebar-border shrink-0"
                     />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center text-sidebar-accent-foreground font-medium">
-                      {user.name.charAt(0)}
+                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                      {user.name.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <span className="hidden md:block text-left text-sm">
-                    <span className="block font-medium text-foreground">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-foreground truncate leading-tight">
                       {user.name}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate">
                       {user.email}
+                    </p>
+                  </div>
+                </div>
+                <ChevronsUpDown className="w-4 h-4 text-muted-foreground/60 group-hover:text-foreground shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              side="top"
+              align="center"
+              sideOffset={8}
+              className="w-56 rounded-xl p-1.5 shadow-md border border-border bg-card"
+            >
+              {/* User Header */}
+              <div className="px-3 py-2 border-b border-border mb-1">
+                <p className="text-xs font-semibold text-foreground truncate">
+                  {user.name}
+                </p>
+                <p className="text-[11px] text-muted-foreground truncate font-mono">
+                  {user.email}
+                </p>
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <Badge
+                    variant="default"
+                    className="text-[10px] h-4 py-0 px-1.5 capitalize font-normal"
+                  >
+                    {user.role}
+                  </Badge>
+                  {user.studentId && (
+                    <span className="text-[10px] font-mono text-muted-foreground">
+                      ID: {user.studentId}
                     </span>
-                  </span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" className="w-52">
-                {modeItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <DropdownMenuItem
-                      key={item.href}
-                      onSelect={() => navigate(item.href)}
-                      className="cursor-pointer"
-                    >
-                      <Icon className="w-4 h-4 mr-2" />
-                      {item.label}
-                    </DropdownMenuItem>
-                  );
-                })}
-                {modeItems.length > 0 && <DropdownMenuSeparator />}
-                <DropdownMenuItem
-                  onClick={() => void logout()}
-                  className="text-destructive cursor-pointer focus:text-destructive focus:bg-destructive/10"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Role Switches */}
+              {modeItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <DropdownMenuItem
+                    key={item.href}
+                    onSelect={() => navigate(item.href)}
+                    className="px-2.5 py-2 text-xs font-medium rounded-lg flex items-center gap-2.5 cursor-pointer text-foreground"
+                  >
+                    <Icon className="w-4 h-4 text-muted-foreground" />
+                    <span>{item.label}</span>
+                  </DropdownMenuItem>
+                );
+              })}
+
+              {modeItems.length > 0 && (
+                <DropdownMenuSeparator className="my-1" />
+              )}
+
+              {/* Logout */}
+              <DropdownMenuItem
+                onClick={() => void logout()}
+                className="px-2.5 py-2 text-xs font-medium rounded-lg flex items-center gap-2.5 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+              >
+                <LogOut className="w-4 h-4 mr-0 text-destructive" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
 

@@ -31,7 +31,7 @@ interface TestCasesProps {
   runningTestCaseIdx?: number | null;
   questionNumber?: number;
   onRunTestCase?: (testCaseIdx: number) => void;
-  /** Fires the "run all" action — if provided, a Run-all button appears in the header. */
+  /** Fires the "run all" action - if provided, a Run-all button appears in the header. */
   onRunAll?: () => void;
   /** Disable the Run-all button (e.g. during cooldown). */
   isRunAllDisabled?: boolean;
@@ -121,16 +121,13 @@ export default function TestCases({
   };
 
   return (
-    <div className="flex flex-col h-full bg-card border border-border overflow-hidden shadow-sm">
-      {/* ── Panel header ── */}
+    <div className="flex flex-col h-full bg-card border border-border overflow-hidden">
       <div className="flex items-center justify-between gap-3 h-10 px-4 bg-muted border-b border-border shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm font-semibold text-foreground tracking-tight truncate">
             Test Cases
           </span>
-          {questionLabel && (
-            <Badge variant="info">{questionLabel}</Badge>
-          )}
+          {questionLabel && <Badge variant="info">{questionLabel}</Badge>}
         </div>
 
         {hasResults && totalCount > 0 && (
@@ -139,14 +136,22 @@ export default function TestCases({
             className="flex items-center gap-3 min-w-0"
           >
             <SummaryStat label="Passed" value={passedCount} variant="success" />
-            <span className="text-border" aria-hidden>·</span>
+            <span className="text-border" aria-hidden>
+              ·
+            </span>
             <SummaryStat
               label="Failed"
               value={failedCount}
               variant="destructive"
             />
-            <span className="text-border" aria-hidden>·</span>
-            <SummaryStat label="Pending" value={pendingCount} variant="default" />
+            <span className="text-border" aria-hidden>
+              ·
+            </span>
+            <SummaryStat
+              label="Pending"
+              value={pendingCount}
+              variant="default"
+            />
           </div>
         )}
 
@@ -209,7 +214,7 @@ export default function TestCases({
                     onClick={() => toggle(index)}
                     aria-expanded={isOpen}
                     aria-controls={`tc-panel-${tc.id}`}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset transition-colors duration-(--motion-fast) ease-(--motion-ease)"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left cursor-pointer hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset transition-colors duration-(--motion-fast) ease-(--motion-ease)"
                   >
                     <ChevronRight
                       className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-(--motion-fast) ease-(--motion-ease) ${
@@ -257,7 +262,8 @@ export default function TestCases({
                         tabIndex={isRunning || isThisRunning ? -1 : 0}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!isRunning && !isThisRunning) onRunTestCase(tcIdx);
+                          if (!isRunning && !isThisRunning)
+                            onRunTestCase(tcIdx);
                         }}
                         onKeyDown={(e) => {
                           if (
@@ -293,7 +299,7 @@ export default function TestCases({
                       {tc.isHidden ? (
                         <p className="text-xs text-muted-foreground italic inline-flex items-center gap-1.5">
                           <EyeOff className="w-3 h-3" aria-hidden />
-                          Hidden input &amp; expected output — only the grader
+                          Hidden input &amp; expected output - only the grader
                           sees them.
                         </p>
                       ) : (
@@ -311,8 +317,7 @@ export default function TestCases({
                         </>
                       )}
 
-                      {(tc.actualOutput !== undefined ||
-                        tc.errorMessage) && (
+                      {(tc.actualOutput !== undefined || tc.errorMessage) && (
                         <IoRow
                           label="Output"
                           value={
@@ -332,8 +337,8 @@ export default function TestCases({
                         tc.actualOutput === undefined &&
                         !tc.errorMessage && (
                           <p className="text-xs text-muted-foreground pt-1">
-                            Click <Play className="inline w-3 h-3 mx-0.5" />{" "}
-                            on a test case to run it, or hit{" "}
+                            Click <Play className="inline w-3 h-3 mx-0.5" /> on
+                            a test case to run it, or hit{" "}
                             <kbd className="px-1 py-0.5 rounded border border-border bg-card text-[10px] font-mono">
                               Run
                             </kbd>{" "}
@@ -349,8 +354,8 @@ export default function TestCases({
             {hiddenCount > 0 && (
               <li className="px-4 py-2 text-xs text-muted-foreground bg-muted/40 inline-flex items-center gap-2">
                 <EyeOff className="w-3.5 h-3.5" aria-hidden />
-                {hiddenCount} hidden test{" "}
-                {hiddenCount === 1 ? "case" : "cases"} (grading only)
+                {hiddenCount} hidden test {hiddenCount === 1 ? "case" : "cases"}{" "}
+                (grading only)
               </li>
             )}
           </ul>

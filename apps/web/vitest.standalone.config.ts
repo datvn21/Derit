@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
 
-// WORKAROUND ONLY — see note.
+// WORKAROUND ONLY - see note.
 //
 // `vite.config.ts` loads `reactRouter()` which triggers `@react-router/dev`
 // to run `typegen` on every Vite start. Typegen does

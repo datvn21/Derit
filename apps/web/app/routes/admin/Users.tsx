@@ -42,11 +42,12 @@ import {
   ShieldCheck,
   UserX,
   UserCheck,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { TablePagination } from "~/components/ui/table-pagination";
+import { ConfirmDeleteDialog } from "~/components/ui/confirm-delete-dialog";
+import { EmptyState } from "~/components/ui/empty-state";
 
 export default function AdminUsers() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -246,11 +247,14 @@ export default function AdminUsers() {
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : users.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Users className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
-              <p className="text-sm">No users found</p>
-            </div>
+            <EmptyState
+              icon={Users}
+              title="No users found"
+              description="No users matched the current search or filters."
+              withCard={false}
+            />
           ) : (
+            <>
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -355,38 +359,16 @@ export default function AdminUsers() {
                   ))}
                 </TableBody>
               </Table>
-          )}
 
-          {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-between px-5 py-3.5 border-t border-border bg-muted">
-              <p className="text-sm text-muted-foreground">
-                Showing {(pagination.page - 1) * 15 + 1} to{" "}
-                {Math.min(pagination.page * 15, pagination.total)} of{" "}
-                {pagination.total} users
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {pagination.page} of {pagination.pages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
-                  disabled={page === pagination.pages}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+              <TablePagination
+                page={pagination.page}
+                pages={pagination.pages}
+                total={pagination.total}
+                limit={15}
+                onPageChange={setPage}
+                itemName="users"
+              />
+            </>
           )}
         </Card>
 
@@ -552,38 +534,22 @@ export default function AdminUsers() {
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-muted-foreground">
-              Are you sure you want to delete user{" "}
-              <strong className="text-foreground">{selectedUser?.name}</strong> ({selectedUser?.email})?
-            </p>
-            <p className="text-sm text-destructive mt-2">
-              This action cannot be undone.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteMutation.mutate(selectedUser._id)}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                "Delete User"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDeleteDialog
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        title="Delete User"
+        description={
+          <>
+            Are you sure you want to delete user{" "}
+            <strong>{selectedUser?.name}</strong> ({selectedUser?.email})?
+            <br />
+            This action cannot be undone.
+          </>
+        }
+        onConfirm={() => deleteMutation.mutate(selectedUser._id)}
+        isDeleting={deleteMutation.isPending}
+        confirmLabel="Delete User"
+      />
     </div>
   );
 }

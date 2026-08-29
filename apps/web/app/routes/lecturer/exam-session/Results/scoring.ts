@@ -46,7 +46,7 @@ export function buildRow(submission: StudentSubmissionLike, maxQuestions: number
   const questions = Array.from({ length: maxQuestions }, () => ({
     passed: 0,
     total: 0,
-    status: "—",
+    status: "-",
   }));
 
   let totalPassed = 0;

@@ -12,7 +12,10 @@ import assert from "node:assert/strict";
 
 import { normalizeEmails } from "../src/services/studentEmail.js";
 import { BoundedCache, KeyedRateLimiter } from "../src/services/bounded.js";
-import { buildExecutionFileList, executeCodeLocally } from "../src/services/codeExecutor.js";
+import {
+  buildExecutionFileList,
+  executeCodeLocally,
+} from "../src/services/codeExecutor.js";
 import {
   aggregateFinalScore,
   buildQuestionSubmission,
@@ -41,7 +44,11 @@ function test(name, fn) {
 async function run() {
   console.log("KeyedRateLimiter");
   await test("stops allowing after the limit is hit", () => {
-    const limiter = new KeyedRateLimiter({ limit: 3, windowMs: 1000, maxEntries: 100 });
+    const limiter = new KeyedRateLimiter({
+      limit: 3,
+      windowMs: 1000,
+      maxEntries: 100,
+    });
     limiter.hit("u1", 0);
     limiter.hit("u1", 1);
     const lastAllowed = limiter.hit("u1", 2);
@@ -53,7 +60,11 @@ async function run() {
   });
 
   await test("sweeps expired entries", () => {
-    const limiter = new KeyedRateLimiter({ limit: 1, windowMs: 10, maxEntries: 100 });
+    const limiter = new KeyedRateLimiter({
+      limit: 1,
+      windowMs: 10,
+      maxEntries: 100,
+    });
     limiter.hit("k1", 0);
     assert.equal(limiter.size(), 1);
     limiter._sweep(1000);
@@ -62,7 +73,11 @@ async function run() {
   });
 
   await test("evicts oldest entries when capacity exceeded", () => {
-    const limiter = new KeyedRateLimiter({ limit: 1, windowMs: 1000, maxEntries: 2 });
+    const limiter = new KeyedRateLimiter({
+      limit: 1,
+      windowMs: 1000,
+      maxEntries: 2,
+    });
     limiter.hit("a", 0);
     limiter.hit("b", 0);
     limiter.hit("c", 0);
@@ -89,7 +104,7 @@ async function run() {
     assert.equal(cache.has("c"), true);
   });
 
-  console.log("codeExecutor — buildExecutionFileList");
+  console.log("codeExecutor - buildExecutionFileList");
   await test("rejects path traversal", () => {
     assert.throws(() =>
       buildExecutionFileList({
@@ -136,17 +151,17 @@ async function run() {
 
   console.log("email normaliser");
   await test("adds the student domain to bare ids", () => {
-    assert.deepEqual(
-      normalizeEmails(["alice", "bob@school.vn", "  ", ""]),
-      ["alice@student.tdtu.edu.vn", "bob@school.vn"],
-    );
+    assert.deepEqual(normalizeEmails(["alice", "bob@school.vn", "  ", ""]), [
+      "alice@student.tdtu.edu.vn",
+      "bob@school.vn",
+    ]);
   });
 
   await test("deduplicates results", () => {
-    assert.deepEqual(
-      normalizeEmails(["alice", "alice", "alice@school.vn"]),
-      ["alice@student.tdtu.edu.vn", "alice@school.vn"],
-    );
+    assert.deepEqual(normalizeEmails(["alice", "alice", "alice@school.vn"]), [
+      "alice@student.tdtu.edu.vn",
+      "alice@school.vn",
+    ]);
   });
 
   console.log("grading service");
@@ -167,7 +182,11 @@ async function run() {
 
   await test("computeQuestionScore handles partial pass", () => {
     assert.equal(
-      computeQuestionScore([{ passed: true }, { passed: false }, { passed: false }]),
+      computeQuestionScore([
+        { passed: true },
+        { passed: false },
+        { passed: false },
+      ]),
       33,
     );
   });
@@ -184,9 +203,7 @@ async function run() {
     const q = buildQuestionSubmission({
       questionNumber: 7,
       code: "",
-      files: [
-        { name: "Main.java", content: "class Main {\r\n}\r\n" },
-      ],
+      files: [{ name: "Main.java", content: "class Main {\r\n}\r\n" }],
       mainFile: "Main.java",
       language: "java",
     });

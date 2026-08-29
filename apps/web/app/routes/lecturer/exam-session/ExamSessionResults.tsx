@@ -32,6 +32,7 @@ import { cn } from "~/lib/utils";
 import { toast } from "sonner";
 import Editor from "@monaco-editor/react";
 import { buildRow, scoreChipClass } from "./Results/scoring";
+import { FileIcon } from "~/components/ui/file-icon";
 
 // Re-exported so other modules (and existing imports) keep working.
 export { passedTests, totalTests } from "./Results/scoring";
@@ -48,7 +49,8 @@ function ScoreChip({
   total: number;
   status: string;
 }) {
-  if (total === 0) return <span className="text-muted-foreground/50 text-xs">—</span>;
+  if (total === 0)
+    return <span className="text-muted-foreground/50 text-xs">-</span>;
 
   return (
     <span
@@ -101,7 +103,10 @@ function Histogram({ rows }: { rows: ReturnType<typeof buildRow>[] }) {
           </span>
           <div className="flex-1 bg-muted rounded h-5 relative overflow-hidden">
             <div
-              className={cn("h-full rounded transition-all duration-500", barColors[i])}
+              className={cn(
+                "h-full rounded transition-all duration-500",
+                barColors[i],
+              )}
               style={{ width: `${(counts[i] / maxCount) * 100}%` }}
             />
           </div>
@@ -184,7 +189,9 @@ function TestcaseRow({ tc, idx }: { tc: any; idx: number }) {
         </div>
         <div className="flex items-center gap-3">
           {tc.executionTime > 0 && (
-            <span className="text-xs text-muted-foreground">{tc.executionTime}ms</span>
+            <span className="text-xs text-muted-foreground">
+              {tc.executionTime}ms
+            </span>
           )}
           {open ? (
             <ChevronDownIcon className="w-4 h-4 text-muted-foreground" />
@@ -351,7 +358,7 @@ function StudentDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay">
       <div
-        className="bg-card rounded-xl shadow-2xl flex flex-col overflow-hidden border border-border"
+        className="bg-card rounded-xl flex flex-col overflow-hidden border border-border"
         style={{ width: "min(1000px, 96vw)", height: "min(780px, 92vh)" }}
       >
         {/* Modal Header */}
@@ -429,7 +436,7 @@ function StudentDetailModal({
                     key={i}
                     onClick={() => handleSelectQuestion(i)}
                     className={cn(
-                      "flex flex-col items-start px-3 py-2.5 text-left transition-colors border-l-2",
+                      "flex flex-col items-start px-3 py-2.5 text-left cursor-pointer transition-colors border-l-2",
                       isActive
                         ? "border-primary bg-card text-primary"
                         : "border-transparent text-muted-foreground hover:bg-card hover:text-foreground",
@@ -453,7 +460,7 @@ function StudentDetailModal({
                       </span>
                     ) : (
                       <span className="text-[10px] text-muted-foreground/50 mt-0.5">
-                        —
+                        -
                       </span>
                     )}
                     <StatusBadge status={q.status} />
@@ -469,7 +476,7 @@ function StudentDetailModal({
                 <button
                   onClick={() => setActiveTab("code")}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 transition-colors -mb-px",
+                    "flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 cursor-pointer transition-colors -mb-px",
                     activeTab === "code"
                       ? "border-primary text-primary"
                       : "border-transparent text-muted-foreground hover:text-foreground",
@@ -480,7 +487,7 @@ function StudentDetailModal({
                 <button
                   onClick={() => setActiveTab("testcases")}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 transition-colors -mb-px",
+                    "flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 cursor-pointer transition-colors -mb-px",
                     activeTab === "testcases"
                       ? "border-primary text-primary"
                       : "border-transparent text-muted-foreground hover:text-foreground",
@@ -512,13 +519,13 @@ function StudentDetailModal({
                               key={i}
                               onClick={() => setActiveFile(i)}
                               className={cn(
-                                "flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono whitespace-nowrap transition-colors",
+                                "flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono whitespace-nowrap cursor-pointer transition-colors",
                                 i === activeFile
-                                  ? "bg-card border border-border text-foreground shadow-sm"
+                                  ? "bg-card border border-border text-foreground"
                                   : "text-muted-foreground hover:text-foreground hover:bg-card",
                               )}
                             >
-                              <FileCode2 className="w-3 h-3" />
+                              <FileIcon name={f.name} className="w-3.5 h-3.5" />
                               {f.name}
                             </button>
                           ))}
@@ -696,7 +703,7 @@ export default function ExamSessionResults() {
     };
 
     sse.onerror = () => {
-      /* server closes SSE on done/error — ignore */
+      /* server closes SSE on done/error - ignore */
     };
 
     setTimeout(async () => {
@@ -920,21 +927,22 @@ export default function ExamSessionResults() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-card/95 backdrop-blur-xs">
+        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate(`/lecturer/exam-sessions/${id}`)}
+              className="h-8 rounded-md border border-border bg-muted/70 px-3 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground shrink-0"
             >
-              <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Back
             </Button>
             <div>
-              <h1 className="text-lg font-semibold text-foreground">
+              <h1 className="text-base font-semibold tracking-tight text-foreground leading-tight">
                 {session?.sessionName || "Results"}
               </h1>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground">
                 {submitted.length} submitted ·{" "}
                 {allRows.length - submitted.length} not submitted
               </p>
@@ -999,7 +1007,7 @@ export default function ExamSessionResults() {
             )}
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-5">
         {/* Stats + Histogram row */}
@@ -1017,17 +1025,17 @@ export default function ExamSessionResults() {
                 {
                   icon: <TrendingUp className="w-4 h-4 text-primary" />,
                   label: "Average",
-                  value: submitted.length ? `${avgScore.toFixed(1)}/10` : "—",
+                  value: submitted.length ? `${avgScore.toFixed(1)}/10` : "-",
                 },
                 {
                   icon: <Trophy className="w-4 h-4 text-warning" />,
                   label: "Highest",
-                  value: submitted.length ? `${highest.toFixed(1)}/10` : "—",
+                  value: submitted.length ? `${highest.toFixed(1)}/10` : "-",
                 },
                 {
                   icon: <AlertTriangle className="w-4 h-4 text-destructive" />,
                   label: "Lowest",
-                  value: submitted.length ? `${lowest.toFixed(1)}/10` : "—",
+                  value: submitted.length ? `${lowest.toFixed(1)}/10` : "-",
                 },
               ].map(({ icon, label, value }) => (
                 <div
@@ -1156,7 +1164,9 @@ export default function ExamSessionResults() {
                             {rank}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground/50 text-xs">—</span>
+                          <span className="text-muted-foreground/50 text-xs">
+                            -
+                          </span>
                         )}
                       </td>
 
@@ -1166,12 +1176,12 @@ export default function ExamSessionResults() {
                           onClick={() =>
                             setDetailModal({
                               studentId: row.student?._id,
-                              studentName: row.student?.name || "—",
+                              studentName: row.student?.name || "-",
                             })
                           }
                         >
                           <p className="font-medium text-foreground truncate text-sm group-hover:text-primary flex items-center gap-1 transition-colors">
-                            {row.student?.name || "—"}
+                            {row.student?.name || "-"}
                             <Eye className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity shrink-0" />
                           </p>
                           <p className="text-xs text-muted-foreground truncate">
@@ -1210,7 +1220,9 @@ export default function ExamSessionResults() {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground/50 text-xs">—</span>
+                          <span className="text-muted-foreground/50 text-xs">
+                            -
+                          </span>
                         )}
                       </td>
 
@@ -1246,7 +1258,7 @@ export default function ExamSessionResults() {
       {/* ── Re-grade Background Job Panel (bottom-right, non-blocking) ── */}
       {regradePanel && regradePanel.open && (
         <div
-          className="fixed bottom-5 right-5 z-40 bg-card rounded-lg border border-border shadow-lg flex flex-col overflow-hidden"
+          className="fixed bottom-5 right-5 z-40 bg-card rounded-lg border border-border flex flex-col overflow-hidden"
           style={{ width: "min(360px, calc(100vw - 2rem))" }}
         >
           <div
@@ -1311,7 +1323,9 @@ export default function ExamSessionResults() {
 
               {regradePanel.error && (
                 <div className="px-4 py-3 bg-destructive/10 border-b border-destructive/30">
-                  <p className="text-xs text-destructive">{regradePanel.error}</p>
+                  <p className="text-xs text-destructive">
+                    {regradePanel.error}
+                  </p>
                 </div>
               )}
 
@@ -1337,7 +1351,7 @@ export default function ExamSessionResults() {
                       </div>
                       {entry.skipped ? (
                         <span className="text-xs text-muted-foreground shrink-0">
-                          —
+                          -
                         </span>
                       ) : (
                         <span className="text-sm font-semibold text-primary shrink-0">
@@ -1353,11 +1367,15 @@ export default function ExamSessionResults() {
                         {entry.questionScores.map((q) => {
                           const variant = STATUS_VARIANT[q.status] ?? "default";
                           const cls = {
-                            success: "bg-success/10 text-success border-success/30",
-                            warning: "bg-warning/15 text-warning border-warning/30",
-                            destructive: "bg-destructive/10 text-destructive border-destructive/30",
+                            success:
+                              "bg-success/10 text-success border-success/30",
+                            warning:
+                              "bg-warning/15 text-warning border-warning/30",
+                            destructive:
+                              "bg-destructive/10 text-destructive border-destructive/30",
                             info: "bg-primary/10 text-primary border-primary/30",
-                            default: "bg-muted text-muted-foreground border-border",
+                            default:
+                              "bg-muted text-muted-foreground border-border",
                           }[variant];
                           return (
                             <span
@@ -1368,7 +1386,9 @@ export default function ExamSessionResults() {
                               )}
                             >
                               Q{q.questionNumber}
-                              <span className="font-semibold">{q.score}/10</span>
+                              <span className="font-semibold">
+                                {q.score}/10
+                              </span>
                               {q.totalTests > 0 && (
                                 <span className="opacity-60">
                                   ({q.passedCount}/{q.totalTests})

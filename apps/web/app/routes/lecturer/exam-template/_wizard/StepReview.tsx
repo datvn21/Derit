@@ -1,5 +1,5 @@
 /**
- * Step 4 — Review & save.
+ * Step 4 - Review & save.
  *
  * Read-only summary of everything assembled in steps 1–3. Lists each
  * issue found so the lecturer can click through to the failing section.
@@ -13,6 +13,7 @@ import {
   Clock,
   Code2,
   BookOpen,
+  Save,
 } from "lucide-react";
 import type { UseTemplateStateResult } from "./useTemplateState";
 import { validateAll, type WizardStepId } from "./steps";
@@ -22,12 +23,14 @@ export function StepReview({
   onJumpTo,
   isSubmitting,
   onSubmit,
+  onSaveDraft,
   submitLabel,
 }: {
   state: UseTemplateStateResult;
   onJumpTo: (step: WizardStepId) => void;
   isSubmitting: boolean;
   onSubmit: () => void;
+  onSaveDraft: () => void;
   submitLabel: string;
 }) {
   const { meta, examCodes } = state;
@@ -39,8 +42,7 @@ export function StepReview({
     0,
   );
   const totalTests = examCodes.reduce(
-    (sum, c) =>
-      sum + c.questions.reduce((s, q) => s + q.testCases.length, 0),
+    (sum, c) => sum + c.questions.reduce((s, q) => s + q.testCases.length, 0),
     0,
   );
   const totalStarterFiles = examCodes.reduce(
@@ -51,13 +53,18 @@ export function StepReview({
 
   return (
     <section className="rounded-xl border border-border bg-card p-6 flex flex-col gap-5">
-      <header>
-        <h2 className="text-lg font-semibold text-foreground">
-          Review &amp; save
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Confirm everything below. Fix any flagged items before saving.
-        </p>
+      <header className="flex items-start gap-3.5">
+        <div className="p-2.5 rounded-xl bg-muted shrink-0 text-foreground">
+          <CheckCircle2 className="w-5 h-5" />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold text-foreground leading-tight">
+            Review &amp; save
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Confirm everything below. Fix any flagged items before saving.
+          </p>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -95,9 +102,7 @@ export function StepReview({
             className="rounded-lg border border-border bg-muted/30 p-3"
           >
             <div className="flex items-center justify-between">
-              <p className="font-medium text-foreground">
-                Code {c.codeNumber}
-              </p>
+              <p className="font-medium text-foreground">Code {c.codeNumber}</p>
               <Badge variant={c.pdfFile || c.pdfUrl ? "success" : "warning"}>
                 {c.pdfFile || c.pdfUrl ? "PDF ready" : "PDF missing"}
               </Badge>
@@ -152,7 +157,16 @@ export function StepReview({
         </div>
       )}
 
-      <div className="flex justify-end gap-2 pt-2">
+      <div className="flex items-center justify-end gap-3 pt-2">
+        <Button
+          variant="outline"
+          onClick={onSaveDraft}
+          disabled={isSubmitting}
+          className="min-w-32"
+        >
+          <Save className="w-3.5 h-3.5 mr-1.5" />
+          Save draft
+        </Button>
         <Button
           onClick={onSubmit}
           disabled={isSubmitting || !allValid}
@@ -224,9 +238,7 @@ function SummaryTile({
         {rows.map((r) => (
           <div key={r.label} className="flex justify-between gap-2">
             <dt className="text-muted-foreground">{r.label}</dt>
-            <dd className="text-foreground font-medium truncate">
-              {r.value}
-            </dd>
+            <dd className="text-foreground font-medium truncate">{r.value}</dd>
           </div>
         ))}
       </dl>

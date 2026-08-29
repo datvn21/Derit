@@ -18,9 +18,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { Badge } from "~/components/ui/badge";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
@@ -43,6 +41,8 @@ import {
   type StarterFile,
 } from "./types";
 import { cn } from "~/lib/utils";
+import { FileIcon } from "~/components/ui/file-icon";
+import Editor from "@monaco-editor/react";
 
 export function QuestionsEditor({
   state,
@@ -57,7 +57,44 @@ export function QuestionsEditor({
   const code = examCodes[activeCodeIndex];
   if (!code) return null;
 
-  const total = code.questions.length;
+  // Track open state of questions for this code: default question 0 is open
+  const [openMap, setOpenMap] = useState<Record<number, boolean>>({ 0: true });
+
+  const handleAddQuestion = () => {
+    const newIndex = code.questions.length;
+    state.addQuestion(activeCodeIndex);
+    // Collapse all previous questions and expand only the new question
+    setOpenMap({ [newIndex]: true });
+    requestAnimationFrame(() => {
+      const el = document.getElementById(
+        `wizard-code-${activeCodeIndex}-question-${newIndex}`,
+      );
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
+
+  const handleToggle = (qi: number) => {
+    setOpenMap((prev) => ({
+      ...prev,
+      [qi]: !prev[qi],
+    }));
+  };
+
+  const handleOpen = (qi: number) => {
+    setOpenMap((prev) => ({
+      ...prev,
+      [qi]: true,
+    }));
+  };
+
+  useEffect(() => {
+    if (!jumpTarget) return;
+    const match = jumpTarget.match(/question-(\d+)/);
+    if (match && match[1] !== undefined) {
+      const targetQi = parseInt(match[1], 10);
+      setOpenMap((prev) => ({ ...prev, [targetQi]: true }));
+    }
+  }, [jumpTarget]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -68,7 +105,7 @@ export function QuestionsEditor({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => state.addQuestion(activeCodeIndex)}
+          onClick={handleAddQuestion}
         >
           <Plus className="w-3.5 h-3.5 mr-1" /> Add question
         </Button>
@@ -81,6 +118,9 @@ export function QuestionsEditor({
             index={qi + 1}
             codeIndex={activeCodeIndex}
             question={q}
+            open={!!openMap[qi]}
+            onToggle={() => handleToggle(qi)}
+            onOpen={() => handleOpen(qi)}
             jumpTarget={jumpTarget}
             onTitleChange={(v) =>
               state.updateQuestion(activeCodeIndex, qi, "title", v)
@@ -140,6 +180,9 @@ function QuestionAccordion({
   index,
   codeIndex,
   question,
+  open,
+  onToggle,
+  onOpen,
   jumpTarget,
   onTitleChange,
   onRemove,
@@ -154,11 +197,13 @@ function QuestionAccordion({
   index: number;
   codeIndex: number;
   question: import("./types").Question;
+  open: boolean;
+  onToggle: () => void;
+  onOpen: () => void;
   jumpTarget?: string;
   onTitleChange: (v: string) => void;
   onRemove: () => void;
 } & SlotHandlers) {
-  const [open, setOpen] = useState(index === 1);
   const [previewFile, setPreviewFile] = useState<{
     name: string;
     content: string;
@@ -175,13 +220,13 @@ function QuestionAccordion({
 
   useEffect(() => {
     if (!jumpTarget?.startsWith(questionId)) return;
-    setOpen(true);
+    onOpen();
     requestAnimationFrame(() => {
       document
         .getElementById(jumpTarget)
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
-  }, [jumpTarget, questionId]);
+  }, [jumpTarget, questionId, onOpen]);
 
   return (
     <article
@@ -196,13 +241,13 @@ function QuestionAccordion({
           "group flex items-center gap-3 px-4 py-3 transition-colors",
           !open && "cursor-pointer hover:bg-muted/30",
         )}
-        onClick={() => !open && setOpen(true)}
+        onClick={() => !open && onOpen()}
       >
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            setOpen((v) => !v);
+            onToggle();
           }}
           aria-expanded={open}
           aria-label={open ? "Collapse question" : "Expand question"}
@@ -384,7 +429,6 @@ function StarterFilesEditor({
           {files.map((sf, i) => {
             const isMain = defaultMainFile === sf.name;
             const entryDisabled = Boolean(defaultMainFile) && !isMain;
-            const ext = sf.name.split(".").pop()?.toLowerCase() ?? "";
             return (
               <li
                 key={`${sf.name}-${i}`}
@@ -393,11 +437,9 @@ function StarterFilesEditor({
                   isMain ? "bg-warning/5" : "hover:bg-muted/40",
                 )}
               >
-                <FileText
-                  className={cn(
-                    "w-4 h-4 shrink-0",
-                    isMain ? "text-warning" : "text-primary",
-                  )}
+                <FileIcon
+                  name={sf.name}
+                  className="w-4 h-4 shrink-0"
                 />
                 <button
                   type="button"
@@ -407,9 +449,6 @@ function StarterFilesEditor({
                 >
                   {sf.name}
                 </button>
-                <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground font-sans">
-                  {ext}
-                </span>
 
                 {isMain && (
                   <Badge variant="warning" className="text-[10px]">
@@ -606,33 +645,51 @@ function TestCaseCard({
         )}
       </div>
 
-      {/* Inputs */}
+      {/* Inputs (Dark Code Blocks) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs text-muted-foreground">Input</Label>
-          <Textarea
+        {/* Input Block */}
+        <div className="flex flex-col rounded-md border border-[#333] bg-[#1e1e1e] overflow-hidden focus-within:border-primary/60 transition-colors">
+          <div className="flex items-center justify-between px-3 py-1.5 bg-[#262626] border-b border-[#333] select-none text-xs">
+            <span className="font-medium text-zinc-300 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
+              Input
+            </span>
+          </div>
+          <textarea
             value={testCase.input}
             onChange={(e) => onUpdate("input", e.target.value)}
             placeholder="e.g. 5"
             spellCheck={false}
-            className="font-mono text-xs leading-snug resize-y min-h-20"
+            className="w-full bg-[#1e1e1e] text-zinc-100 placeholder:text-zinc-500 font-mono text-xs p-3 leading-relaxed resize-y min-h-[76px] outline-none border-0 focus:ring-0"
             rows={3}
           />
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs text-muted-foreground">
-            Expected output
-            <RequiredMark />
-          </Label>
-          <Textarea
+
+        {/* Expected Output Block */}
+        <div
+          className={cn(
+            "flex flex-col rounded-md border border-[#333] bg-[#1e1e1e] overflow-hidden focus-within:border-primary/60 transition-colors",
+            outputMissing && "border-warning/80 focus-within:border-warning",
+          )}
+        >
+          <div className="flex items-center justify-between px-3 py-1.5 bg-[#262626] border-b border-[#333] select-none text-xs">
+            <span className="font-medium text-zinc-300 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+              Expected output
+              <RequiredMark />
+            </span>
+            {outputMissing && (
+              <span className="text-[11px] text-warning font-medium">
+                Required
+              </span>
+            )}
+          </div>
+          <textarea
             value={testCase.expectedOutput}
             onChange={(e) => onUpdate("expectedOutput", e.target.value)}
             placeholder="e.g. 120"
             spellCheck={false}
-            className={cn(
-              "font-mono text-xs leading-snug resize-y min-h-20",
-              outputMissing && "border-warning focus-visible:ring-warning",
-            )}
+            className="w-full bg-[#1e1e1e] text-zinc-100 placeholder:text-zinc-500 font-mono text-xs p-3 leading-relaxed resize-y min-h-[76px] outline-none border-0 focus:ring-0"
             rows={3}
           />
         </div>
@@ -756,80 +813,84 @@ function FileSlot({
 
   return (
     <div className="flex flex-col gap-2">
-      <Label className="text-xs text-muted-foreground flex items-center gap-2">
-        {label}
-        {required && <RequiredMark />}
+      <div className="flex items-center gap-2 h-5">
+        <Label className="text-xs text-muted-foreground flex items-center gap-1">
+          {label}
+          {required && <RequiredMark />}
+        </Label>
         {singleFile && (
-          <Badge variant="warning" className="text-[10px]">
+          <Badge variant="warning" className="text-[10px] px-1.5 py-0 h-4">
             Attached
           </Badge>
         )}
         {manyFiles.length > 0 && (
-          <Badge variant="info" className="text-[10px]">
+          <Badge variant="primary" className="text-[10px] px-1.5 py-0 h-4">
             {manyFiles.length} attached
           </Badge>
         )}
-      </Label>
+      </div>
 
-      {singleFile ? (
-        <FileChip
-          name={singleFile.name}
-          tone={tone}
-          onPreview={() => onPreview(singleFile)}
-          onRemove={onClear}
-        />
-      ) : (
-        <div className="flex flex-col gap-1.5">
-          <FileUploadLabel
-            multiple={multiple}
-            accept={accept}
-            onFiles={(list) => {
-              if (!list) return;
-              const files = Array.from(list);
-              if (multiple) {
-                files.forEach((file) => {
+      <div className="flex flex-wrap items-center gap-2 min-h-[36px]">
+        {singleFile ? (
+          <FileChip
+            name={singleFile.name}
+            tone={tone}
+            onPreview={() => onPreview(singleFile)}
+            onRemove={onClear}
+          />
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <FileUploadLabel
+              multiple={multiple}
+              accept={accept}
+              onFiles={(list) => {
+                if (!list) return;
+                const files = Array.from(list);
+                if (multiple) {
+                  files.forEach((file) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) =>
+                      onAdd?.({
+                        name: file.name,
+                        content: (e.target?.result as string) ?? "",
+                      });
+                    reader.readAsText(file);
+                  });
+                } else {
+                  const file = files[0];
+                  if (!file) return;
                   const reader = new FileReader();
                   reader.onload = (e) =>
-                    onAdd?.({
+                    onChange?.({
                       name: file.name,
                       content: (e.target?.result as string) ?? "",
                     });
                   reader.readAsText(file);
-                });
-              } else {
-                const file = files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (e) =>
-                  onChange?.({
-                    name: file.name,
-                    content: (e.target?.result as string) ?? "",
-                  });
-                reader.readAsText(file);
-              }
-            }}
-            variant={missing ? "required" : "inline"}
-          >
-            <Upload className="w-3.5 h-3.5 mr-1" />
-            {placeholder}
-          </FileUploadLabel>
-          {required && missing && (
-            <p className="text-xs text-warning">
-              Required — upload the test file for this test case.
-            </p>
-          )}
-        </div>
-      )}
+                }
+              }}
+              variant={missing ? "required" : "inline"}
+            >
+              <Upload className="w-3.5 h-3.5 mr-1" />
+              {placeholder}
+            </FileUploadLabel>
+            {required && missing && (
+              <p className="text-xs text-warning">
+                Required — upload the test file for this test case.
+              </p>
+            )}
+          </div>
+        )}
 
-      {manyFiles.map((f) => (
-        <FileChip
-          key={f.name}
-          name={f.name}
-          tone={tone}
-          onPreview={() => onPreview(f)}
-          onRemove={() => onRemove?.(f.name)}
-        />
-      ))}
+        {manyFiles.map((f) => (
+          <FileChip
+            key={f.name}
+            name={f.name}
+            tone={tone}
+            onPreview={() => onPreview(f)}
+            onRemove={() => onRemove?.(f.name)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -855,8 +916,8 @@ function FileUploadLabel({
         isDropzone
           ? "flex flex-col items-center justify-center gap-2 px-4 py-6 border border-dashed border-border rounded-md cursor-pointer bg-muted hover:bg-muted/50 hover:border-primary/50 transition-colors text-center"
           : isRequired
-            ? "inline-flex items-center px-3 py-1.5 border border-dashed border-warning rounded-md text-xs text-warning cursor-pointer hover:bg-warning/10 hover:border-warning transition-colors self-start"
-            : "inline-flex items-center px-3 py-1.5 border border-dashed border-border rounded-md text-xs text-muted-foreground cursor-pointer hover:bg-muted hover:text-foreground hover:border-foreground/30 transition-colors self-start",
+            ? "h-9 inline-flex items-center gap-1.5 px-3 border border-dashed border-warning rounded-md text-xs text-warning cursor-pointer hover:bg-warning/10 hover:border-warning transition-colors self-start"
+            : "h-9 inline-flex items-center gap-1.5 px-3 border border-dashed border-border rounded-md text-xs text-muted-foreground cursor-pointer hover:bg-muted hover:text-foreground hover:border-foreground/30 transition-colors self-start",
       )}
     >
       {children}
@@ -888,22 +949,20 @@ function FileChip({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-sans self-start max-w-full",
+        "h-9 inline-flex items-center gap-2 rounded-md border px-3 text-xs font-sans self-start max-w-full",
         tone === "warning"
           ? "bg-warning/5 border-warning/30"
-          : "bg-accent border-accent-foreground/20",
+          : "bg-muted/50 border-border",
       )}
     >
-      <FileText
-        className={cn(
-          "w-3.5 h-3.5 shrink-0",
-          tone === "warning" ? "text-warning" : "text-primary",
-        )}
+      <FileIcon
+        name={name}
+        className="w-4 h-4 shrink-0"
       />
       <button
         type="button"
         onClick={onPreview}
-        className="truncate hover:underline cursor-pointer text-foreground"
+        className="truncate hover:underline cursor-pointer text-foreground font-medium"
       >
         {name}
       </button>
@@ -913,9 +972,9 @@ function FileChip({
           size="sm"
           onClick={onRemove}
           aria-label={`Remove ${name}`}
-          className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          className="h-6 w-6 p-0 ml-0.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
         >
-          <Trash2 className="w-3 h-3" />
+          <Trash2 className="w-3.5 h-3.5" />
         </Button>
       )}
     </div>
@@ -926,6 +985,42 @@ function FileChip({
 /*                              File preview dialog                            */
 /* -------------------------------------------------------------------------- */
 
+function getMonacoLanguage(filename?: string): string {
+  if (!filename) return "plaintext";
+  const ext = filename.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "java":
+      return "java";
+    case "py":
+    case "python":
+      return "python";
+    case "cpp":
+    case "cc":
+    case "cxx":
+    case "c":
+    case "h":
+    case "hpp":
+      return "cpp";
+    case "js":
+      return "javascript";
+    case "ts":
+      return "typescript";
+    case "json":
+      return "json";
+    case "html":
+      return "html";
+    case "css":
+      return "css";
+    case "sql":
+      return "sql";
+    case "sh":
+    case "bash":
+      return "shell";
+    default:
+      return "plaintext";
+  }
+}
+
 function FilePreviewDialog({
   file,
   onClose,
@@ -933,23 +1028,40 @@ function FilePreviewDialog({
   file: { name: string; content: string } | null;
   onClose: () => void;
 }) {
+  const language = file?.name ? getMonacoLanguage(file.name) : "plaintext";
+
   return (
     <Dialog open={!!file} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        showCloseButton={false}
-        className="max-w-4xl max-h-[80vh] overflow-hidden"
+        showCloseButton={true}
+        className="sm:max-w-4xl w-[92vw] h-[80vh] flex flex-col p-0 gap-0 overflow-hidden"
       >
-        <DialogHeader>
-          <DialogTitle>{file?.name}</DialogTitle>
+        <DialogHeader className="px-5 py-3.5 border-b border-border bg-card">
+          <DialogTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <FileIcon name={file?.name || ""} className="w-4 h-4 shrink-0" />
+            <span>{file?.name}</span>
+          </DialogTitle>
         </DialogHeader>
-        <div className="overflow-auto bg-muted text-foreground text-sm p-4 rounded-md max-h-[60vh] font-mono">
-          <pre className="whitespace-pre-wrap break-words">{file?.content}</pre>
+        <div className="flex-1 min-h-0 bg-background overflow-hidden">
+          <Editor
+            height="100%"
+            language={language}
+            value={file?.content ?? ""}
+            theme="vs"
+            options={{
+              readOnly: true,
+              minimap: { enabled: false },
+              fontSize: 13,
+              lineNumbers: "on",
+              scrollBeyondLastLine: false,
+              wordWrap: "off",
+              automaticLayout: true,
+              renderLineHighlight: "all",
+              domReadOnly: true,
+              padding: { top: 12, bottom: 12 },
+            }}
+          />
         </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="default">Close</Button>
-          </DialogClose>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

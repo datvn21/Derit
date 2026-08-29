@@ -1,5 +1,5 @@
 /**
- * Step 1 — Template info: name, exam type, language, duration.
+ * Step 1 - Template info: name, exam type, language, duration.
  *
  * Pure presentation; all state lives in `useTemplateState`.
  */
@@ -22,18 +22,26 @@ export function StepTemplateInfo({ state }: { state: UseTemplateStateResult }) {
   const languageLocked = meta.examType === "OOP" || meta.examType === "DSA";
 
   return (
-    <section className="rounded-xl border border-border bg-card p-6 flex flex-col gap-5">
-      <header>
-        <h2 className="text-lg font-semibold text-foreground">
-          Template information
-        </h2>
+    <section className="rounded-xl border border-border bg-card p-6 flex flex-col gap-6">
+      <header className="flex items-start gap-3.5">
+        <div className="p-2.5 rounded-xl bg-muted shrink-0 text-foreground">
+          <BookOpen className="w-5 h-5" />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold text-foreground leading-tight">
+            Template information
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Configure exam name, category type, programming language, and time
+            limit.
+          </p>
+        </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
         <Field
           id="templateName"
           label="Template name"
-          icon={FileText}
           help="Shown to students. Pick something they'll recognize."
         >
           <Input
@@ -44,7 +52,7 @@ export function StepTemplateInfo({ state }: { state: UseTemplateStateResult }) {
           />
         </Field>
 
-        <Field id="examType" label="Exam type" icon={BookOpen}>
+        <Field id="examType" label="Exam type">
           <Select
             value={meta.examType}
             onValueChange={(v) =>
@@ -68,7 +76,6 @@ export function StepTemplateInfo({ state }: { state: UseTemplateStateResult }) {
         <Field
           id="language"
           label="Language"
-          icon={Code2}
           help={
             languageLocked
               ? "Locked to Java for OOP/DSA exams."
@@ -102,7 +109,6 @@ export function StepTemplateInfo({ state }: { state: UseTemplateStateResult }) {
         <Field
           id="duration"
           label="Duration (minutes)"
-          icon={Clock}
           help="Time students have once they join the session."
         >
           <Input
@@ -123,20 +129,17 @@ export function StepTemplateInfo({ state }: { state: UseTemplateStateResult }) {
 function Field({
   id,
   label,
-  icon: Icon,
   help,
   children,
 }: {
   id: string;
   label: string;
-  icon: typeof FileText;
   help?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id} className="flex items-center gap-1.5 text-sm">
-        <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+      <Label htmlFor={id} className="text-xs font-medium text-foreground">
         {label}
       </Label>
       {children}

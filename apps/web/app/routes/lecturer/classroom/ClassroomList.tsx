@@ -33,24 +33,25 @@ import {
   Users,
   Calendar,
   Search,
-  Loader2,
   MoreHorizontal,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useMemo } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { cn } from "~/lib/utils";
 import { getClassroomAcademicYear } from "~/lib/academic-year";
 import { ViewToggle, type ViewMode } from "~/components/ui/view-toggle";
+import { PageLoading } from "~/components/ui/page-loading";
+import { EmptyState } from "~/components/ui/empty-state";
+import { ConfirmDeleteDialog } from "~/components/ui/confirm-delete-dialog";
 
 export default function ClassroomList() {
   const navigate = useNavigate();
@@ -98,7 +99,7 @@ export default function ClassroomList() {
 
   const academicYears = useMemo(() => {
     return Array.from(
-      new Set(
+      new Set<string>(
         classrooms.map((classroom: any) => getClassroomAcademicYear(classroom)),
       ),
     ).sort((a, b) => Number(b) - Number(a));
@@ -126,20 +127,13 @@ export default function ClassroomList() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground mt-4">Loading classrooms...</p>
-        </div>
-      </div>
-    );
+    return <PageLoading label="Loading classrooms…" />;
   }
 
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
-        {/* Page header — title + create action only */}
+        {/* Page header - title + create action only */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">
@@ -174,10 +168,30 @@ export default function ClassroomList() {
         {/* Results */}
         {filtered.length === 0 ? (
           <EmptyState
-            query={query}
-            hasFilter={hasActiveFilter}
-            onClear={clearFilters}
-            onCreate={() => navigate("/lecturer/classrooms/create")}
+            icon={hasActiveFilter ? Search : Users}
+            title={
+              hasActiveFilter ? "No matching classrooms" : "No classrooms yet"
+            }
+            description={
+              hasActiveFilter
+                ? query
+                  ? `No classrooms match "${query}".`
+                  : "No classrooms match the current filters."
+                : "Create your first classroom to group students for exams."
+            }
+            action={
+              hasActiveFilter ? (
+                <Button variant="outline" onClick={clearFilters}>
+                  <X className="w-3.5 h-3.5 mr-1" />
+                  Clear filters
+                </Button>
+              ) : (
+                <Button onClick={() => navigate("/lecturer/classrooms/create")}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Classroom
+                </Button>
+              )
+            }
           />
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -227,48 +241,20 @@ export default function ClassroomList() {
       </div>
 
       {/* Delete Confirm Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="w-5 h-5" />
-              Delete Classroom
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete{" "}
-              <strong>"{deleteTargetName}"</strong>? This action cannot be
-              undone. Existing sessions linked to this classroom will not be
-              affected.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              disabled={deleteMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Classroom"
+        description={
+          <>
+            Are you sure you want to delete{" "}
+            <strong>"{deleteTargetName}"</strong>? This action cannot be undone.
+            Existing sessions linked to this classroom will not be affected.
+          </>
+        }
+        onConfirm={handleConfirmDelete}
+        isDeleting={deleteMutation.isPending}
+      />
     </div>
   );
 }
@@ -293,7 +279,7 @@ function ClassroomToolbar({
   return (
     <Card className="shadow-none">
       <CardContent className="p-2">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <Input
@@ -315,65 +301,32 @@ function ClassroomToolbar({
             )}
           </div>
 
-          <div className="flex min-w-0 items-center gap-2">
-            <YearFilterPills
-              options={academicYears}
-              value={academicYearFilter}
-              onChange={onAcademicYearFilterChange}
-            />
+          <div className="flex items-center gap-2">
+            <Select
+              value={academicYearFilter ?? "all"}
+              onValueChange={(val) =>
+                onAcademicYearFilterChange(val === "all" ? null : val)
+              }
+            >
+              <SelectTrigger
+                className="w-[140px] h-9"
+                aria-label="Filter by academic year"
+              >
+                <SelectValue placeholder="All Years" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Years</SelectItem>
+                {academicYears.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*                              Academic year filter                          */
-/* -------------------------------------------------------------------------- */
-
-function YearFilterPills({
-  options,
-  value,
-  onChange,
-}: {
-  options: string[];
-  value: string | null;
-  onChange: (value: string | null) => void;
-}) {
-  return (
-    <div className="inline-flex shrink-0 items-center gap-1.5">
-      <span className="text-xs font-medium text-muted-foreground">Year</span>
-      <div className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
-        <button
-          type="button"
-          onClick={() => onChange(null)}
-          className={cn(
-            "h-8 rounded-md px-4 text-xs font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            value === null
-              ? "bg-primary text-white shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          All
-        </button>
-        {options.map((year) => (
-          <button
-            key={year}
-            type="button"
-            onClick={() => onChange(value === year ? null : year)}
-            className={cn(
-              "h-8 rounded-md px-4 text-xs font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              value === year
-                ? "bg-primary text-white shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {year}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -463,7 +416,7 @@ function ClassroomListRow({
   const studentCount = classroom.students?.length || 0;
   const academicYear = getClassroomAcademicYear(classroom);
   const createdAt = new Date(classroom.createdAt).toLocaleDateString("vi-VN");
-  const preview = classroom.students?.slice(0, 3).join(", ") || "—";
+  const preview = classroom.students?.slice(0, 3).join(", ") || "-";
 
   return (
     <TableRow>
@@ -535,60 +488,5 @@ function ClassroomActions({ onDelete }: { onDelete: () => void }) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                Empty state                                 */
-/* -------------------------------------------------------------------------- */
-
-function EmptyState({
-  query,
-  hasFilter,
-  onClear,
-  onCreate,
-}: {
-  query: string;
-  hasFilter: boolean;
-  onClear: () => void;
-  onCreate: () => void;
-}) {
-  if (hasFilter) {
-    return (
-      <Card>
-        <CardContent className="p-12 text-center">
-          <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-foreground mb-1">
-            No matching classrooms
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            {query
-              ? `No classrooms match "${query}".`
-              : "No classrooms match the current filters."}
-          </p>
-          <Button variant="outline" onClick={onClear}>
-            <X className="w-3.5 h-3.5 mr-1" />
-            Clear filters
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-  return (
-    <Card>
-      <CardContent className="p-12 text-center">
-        <Users className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-        <h3 className="text-lg font-medium text-foreground mb-1">
-          No classrooms yet
-        </h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Create your first classroom to group students for exams.
-        </p>
-        <Button onClick={onCreate}>
-          <Plus className="w-4 h-4 mr-2" />
-          Create Classroom
-        </Button>
-      </CardContent>
-    </Card>
   );
 }

@@ -18,7 +18,10 @@ import { fileURLToPath } from "url";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./src/config/swagger.js";
 import MongoStore from "connect-mongo";
-import { initNsjailExecutor, cleanupNsjailExecutor } from "./src/services/nsjailExecutor.js";
+import {
+  initNsjailExecutor,
+  cleanupNsjailExecutor,
+} from "./src/services/nsjailExecutor.js";
 import adminRouter from "./src/routes/admin.js";
 import e2eSupportRouter from "./src/routes/e2eSupport.js";
 
@@ -27,7 +30,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Session secret — required in production, falls back to a clearly labeled dev secret otherwise
+// Session secret - required in production, falls back to a clearly labeled dev secret otherwise
 const SESSION_SECRET = (() => {
   if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
   if (process.env.NODE_ENV === "production") {
@@ -36,8 +39,10 @@ const SESSION_SECRET = (() => {
   return "dev-secret-derit-local-only";
 })();
 
-// Feature flags — explicit, not implicit from NODE_ENV
-const ENABLE_SWAGGER = process.env.ENABLE_SWAGGER === "true" || process.env.NODE_ENV !== "production";
+// Feature flags - explicit, not implicit from NODE_ENV
+const ENABLE_SWAGGER =
+  process.env.ENABLE_SWAGGER === "true" ||
+  process.env.NODE_ENV !== "production";
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -50,7 +55,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
     exposedHeaders: ["X-Request-ID"],
   }),
@@ -154,11 +159,14 @@ if (process.env.E2E_TEST_MODE === "true") {
   app.use("/__e2e", e2eSupportRouter);
 }
 
-// Centralised error handler — never leak stack traces to clients
+// Centralised error handler - never leak stack traces to clients
 app.use((err, req, res, _next) => {
   console.error(`[error][${req.id}] ${err.stack || err.message}`);
   res.status(err.status || 500).json({
-    error: process.env.NODE_ENV === "production" ? "Internal Server Error" : err.message,
+    error:
+      process.env.NODE_ENV === "production"
+        ? "Internal Server Error"
+        : err.message,
     requestId: req.id,
   });
 });
@@ -180,7 +188,7 @@ connectDB().then(async () => {
   });
 });
 
-// Graceful shutdown — closes HTTP server before destroying nsjail resources
+// Graceful shutdown - closes HTTP server before destroying nsjail resources
 let isShuttingDown = false;
 const gracefulShutdown = async (signal) => {
   if (isShuttingDown) {

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { BACKEND_URL } from "~/lib/api";
 
@@ -146,7 +146,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: PDFViewerProps) {
             onClick={zoomOut}
             disabled={!fitWidth && scale <= ZOOM_MIN}
             title="Zoom out"
-            className="p-1 rounded hover:bg-gray-600 disabled:opacity-30 disabled:cursor-default transition-colors"
+            className="p-1 rounded hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
@@ -158,7 +158,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: PDFViewerProps) {
             className={`px-2 py-0.5 rounded text-xs font-medium min-w-[52px] text-center transition-colors ${
               fitWidth
                 ? "text-blue-400 cursor-default"
-                : "text-gray-200 hover:bg-gray-600"
+                : "text-gray-200 hover:bg-gray-600 cursor-pointer"
             }`}
           >
             {fitWidth ? (
@@ -174,7 +174,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: PDFViewerProps) {
             onClick={zoomIn}
             disabled={!fitWidth && scale >= ZOOM_MAX}
             title="Zoom in"
-            className="p-1 rounded hover:bg-gray-600 disabled:opacity-30 disabled:cursor-default transition-colors"
+            className="p-1 rounded hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
           >
             <ZoomIn className="w-3.5 h-3.5" />
           </button>

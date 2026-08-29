@@ -111,6 +111,8 @@ export const classroomAPI = {
     getById: (id: string) => api.get(`/classrooms/${id}`),
     update: (id: string, data: any) => api.put(`/classrooms/${id}`, data),
     delete: (id: string) => api.delete(`/classrooms/${id}`),
+    lookupStudents: (studentIds: string[]) =>
+        api.post('/classrooms/lookup-students', { studentIds }),
 };
 
 // Upload APIs

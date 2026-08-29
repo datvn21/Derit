@@ -86,22 +86,28 @@ export default function ExamTemplateEdit() {
   const updateMutation = useMutation({
     mutationFn: (data: Parameters<typeof examTemplateAPI.update>[1]) =>
       examTemplateAPI.update(id!, data),
-    onSuccess: () => {
-      toast.success("Template updated successfully");
-      navigate("/lecturer/exam-templates");
-    },
     onError: (error: { response?: { data?: { error?: string } } }) => {
-      toast.error(
-        error.response?.data?.error || "Failed to update template",
-      );
+      toast.error(error.response?.data?.error || "Failed to update template");
       setIsSubmitting(false);
     },
   });
 
-  const submit = async (payload: Parameters<typeof examTemplateAPI.update>[1]) => {
+  const submit = async (
+    payload: Parameters<typeof examTemplateAPI.update>[1],
+    options?: { isDraft?: boolean },
+  ) => {
     setIsSubmitting(true);
     try {
-      await updateMutation.mutateAsync({ ...payload, isPublished: true });
+      await updateMutation.mutateAsync({
+        ...payload,
+        isPublished: !options?.isDraft,
+      });
+      toast.success(
+        options?.isDraft
+          ? "Draft saved successfully"
+          : "Template updated successfully",
+      );
+      navigate("/lecturer/exam-templates");
     } catch {
       // Error already toasted; reset submitting so user can retry.
       setIsSubmitting(false);

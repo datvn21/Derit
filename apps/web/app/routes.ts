@@ -4,9 +4,11 @@ export default [
   // Login page
   index("routes/Login.tsx"),
   // Student routes
-  route("student", "routes/student/Dashboard.tsx"),
-  route("student/history", "routes/student/History.tsx"),
-  route("student/history/:sessionId", "routes/student/HistoryDetail.tsx"),
+  layout("routes/student/Layout.tsx", [
+    route("student", "routes/student/Dashboard.tsx"),
+    route("student/history", "routes/student/History.tsx"),
+    route("student/history/:sessionId", "routes/student/HistoryDetail.tsx"),
+  ]),
   route("student/exam/:sessionId", "routes/student/Exam/$sessionId.tsx"),
   // Lecturer routes
   layout("components/Layout.tsx", [

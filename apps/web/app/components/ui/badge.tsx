@@ -1,5 +1,5 @@
 /**
- * `Badge` — single source of truth for status / role / count pills.
+ * `Badge` - single source of truth for status / role / count pills.
  *
  * Variants are semantic, not chromatic. Five named states map to real
  * product meanings; no "rainbow tone" rainbow tone encoding (see audit
@@ -20,12 +20,10 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default: "bg-muted text-muted-foreground",
-        success:
-          "bg-success/10 text-success",
-        warning:
-          "bg-warning/15 text-warning",
-        destructive:
-          "bg-destructive/10 text-destructive",
+        primary: "bg-primary text-primary-foreground",
+        success: "bg-success/10 text-success",
+        warning: "bg-warning/15 text-warning",
+        destructive: "bg-destructive/10 text-destructive",
         info: "bg-primary text-white",
       },
     },
@@ -36,8 +34,7 @@ const badgeVariants = cva(
 );
 
 export interface BadgeProps
-  extends React.ComponentProps<"span">,
-    VariantProps<typeof badgeVariants> {
+  extends React.ComponentProps<"span">, VariantProps<typeof badgeVariants> {
   asChild?: boolean;
 }
 

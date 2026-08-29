@@ -201,7 +201,7 @@ export default function Layout() {
   } | null>(null);
   const [isConsoleRunning, setIsConsoleRunning] = useState(false);
 
-  // ── D: Separate cooldowns — console/full-run (5 s) vs per-testcase (2 s) ─────
+  // ── D: Separate cooldowns - console/full-run (5 s) vs per-testcase (2 s) ─────
   const consoleCooldown = useCooldownTimer();
   const testCaseCooldown = useCooldownTimer();
 
@@ -222,7 +222,7 @@ export default function Layout() {
     saveStatusRef.current = saveStatus;
   }, [saveStatus]);
 
-  // Stable refs for editor state — read by every save path without re-creating callbacks
+  // Stable refs for editor state - read by every save path without re-creating callbacks
   const perQFilesRef = useRef<Record<number, FileTab[]>>({});
   const perQMainRef = useRef<Record<number, string>>({});
   const examDataRef = useRef(examData);
@@ -414,7 +414,9 @@ export default function Layout() {
   const handleRunConsole = useCallback(async () => {
     if (!examData) return;
     if (consoleCooldown.value > 0) {
-      toast.warning(`Please wait ${consoleCooldown.value}s before running again.`);
+      toast.warning(
+        `Please wait ${consoleCooldown.value}s before running again.`,
+      );
       return;
     }
     consoleCooldown.start(CONSOLE_COOLDOWN_SECS);
@@ -440,18 +442,15 @@ export default function Layout() {
     } finally {
       setIsConsoleRunning(false);
     }
-  }, [
-    currentFiles,
-    currentMain,
-    examData,
-    consoleCooldown,
-  ]);
+  }, [currentFiles, currentMain, examData, consoleCooldown]);
 
   // ── Run: submit code then wait via SSE until graded ─────────────────────
   const handleRun = useCallback(async () => {
     if (!sessionId || !currentQuestion || !examData) return;
     if (consoleCooldown.value > 0) {
-      toast.warning(`Please wait ${consoleCooldown.value}s before running again.`);
+      toast.warning(
+        `Please wait ${consoleCooldown.value}s before running again.`,
+      );
       return;
     }
     consoleCooldown.start(CONSOLE_COOLDOWN_SECS);
@@ -516,12 +515,14 @@ export default function Layout() {
     consoleCooldown,
   ]);
 
-  // ── E+B: Per-testcase run — track index independently, push result via SSE ───
+  // ── E+B: Per-testcase run - track index independently, push result via SSE ───
   const handleRunTestCase = useCallback(
     async (testCaseIndex: number) => {
       if (!sessionId || !currentQuestion || !examData) return;
       if (testCaseCooldown.value > 0) {
-        toast.warning(`Please wait ${testCaseCooldown.value}s before running again.`);
+        toast.warning(
+          `Please wait ${testCaseCooldown.value}s before running again.`,
+        );
         return;
       }
       testCaseCooldown.start(TC_COOLDOWN_SECS);
@@ -646,12 +647,12 @@ export default function Layout() {
 
   const handleCodeChange = useCallback(
     (files: FileTab[], main: string) => {
-      // Read the live question number from ref — never from the stale closure.
+      // Read the live question number from ref - never from the stale closure.
       // This prevents writing file content to the wrong question if the callback
       // fires just after a question switch (e.g. via a React batched update).
       const qn = currentQNRef.current;
       if (qn == null) return;
-      // Update refs immediately — save path reads exclusively from refs, never from state
+      // Update refs immediately - save path reads exclusively from refs, never from state
       perQFilesRef.current[qn] = files;
       perQMainRef.current[qn] = main;
       setPerQFiles((prev) => ({ ...prev, [qn]: files }));
@@ -763,7 +764,9 @@ export default function Layout() {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-3 bg-background">
         <div className="w-10 h-10 rounded-full border-4 border-border border-t-primary animate-spin" />
-        <p className="text-sm text-muted-foreground font-medium">Đang tải đề thi…</p>
+        <p className="text-sm text-muted-foreground font-medium">
+          Đang tải đề thi…
+        </p>
       </div>
     );
   }
@@ -799,14 +802,12 @@ export default function Layout() {
         onExit={handleExit}
       />
 
-      {/* Main Content — split view */}
+      {/* Main Content - split view */}
       <div className="flex-1 flex overflow-hidden">
         {/* ── Left: PDF ── */}
         <div className="overflow-hidden" style={{ width: `${splitPosition}%` }}>
           <div className="h-full">
-            <div className="h-full  overflow-hidden shadow-sm border border-gray-200 bg-white">
-              <PDFViewer pdfUrl={pdfUrl} className="h-full" />
-            </div>
+            <div className="h-full overflow-hidden border border-border bg-card"></div>
           </div>
         </div>
 

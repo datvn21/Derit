@@ -11,7 +11,7 @@
  */
 import UserModel from "../models/User.js";
 
-// Permission constants — single source of truth.
+// Permission constants - single source of truth.
 export const PERMISSIONS = {
   USERS_READ: "users:read",
   USERS_WRITE: "users:write",

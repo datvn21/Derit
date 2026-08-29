@@ -45,16 +45,16 @@ Spec files live in `tests/characterization/`.
 
 The pipeline should run, in order:
 
-  1. **Lint + typecheck** — fast fail.
+  1. **Lint + typecheck** - fast fail.
   2. **Server unit tests** (the `node tests/*.mjs` runners).
   3. **Server integration tests** (Jest + Supertest) against a Mongo test
      container.
-  4. **Sandbox integration** — `nsjail-java`/`nsjail-python` smoke tests
+  4. **Sandbox integration** - `nsjail-java`/`nsjail-python` smoke tests
      guarded behind `RUN_SANDBOX_TESTS=1`.
   5. **Web unit tests** (Vitest/Testing Library).
   6. **Playwright E2E** on a real browser against the dev server.
 
-Coverage thresholds are intentionally not pinned yet — the current
+Coverage thresholds are intentionally not pinned yet - the current
 characterization suite is meant to defend existing flows without gating
 on a number that the existing tests can't honestly meet.
 

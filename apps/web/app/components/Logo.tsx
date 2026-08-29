@@ -1,5 +1,5 @@
 /**
- * `Logo` — single source of truth for the Derit wordmark/lockup.
+ * `Logo` - single source of truth for the Derit wordmark/lockup.
  *
  * Three locked sizes (`sm | md | lg`) align to the brand-mark grid:
  *   - sm (h-8)  : sidebar / inline
@@ -27,7 +27,11 @@ export interface LogoProps {
   alt?: string;
 }
 
-export default function Logo({ size = "sm", className, alt = "Derit" }: LogoProps) {
+export default function Logo({
+  size = "sm",
+  className,
+  alt = "Derit",
+}: LogoProps) {
   return (
     <img
       src={LogoAsset}

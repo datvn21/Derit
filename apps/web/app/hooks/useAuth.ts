@@ -1,5 +1,5 @@
 /**
- * `useAuth` — single source of truth for current-user state in the web app.
+ * `useAuth` - single source of truth for current-user state in the web app.
  *
  * The previous code duplicated a `useEffect` that called `authAPI.getUser()`
  * on every layout/route. Centralising the lookup:

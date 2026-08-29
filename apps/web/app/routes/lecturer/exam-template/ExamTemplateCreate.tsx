@@ -20,22 +20,31 @@ export default function ExamTemplateCreate() {
   const createMutation = useMutation({
     mutationFn: (data: Parameters<typeof examTemplateAPI.create>[0]) =>
       examTemplateAPI.create(data),
-    onSuccess: () => {
-      toast.success("Template created successfully");
-      navigate("/lecturer/exam-templates");
-    },
-    onError: (error: { response?: { data?: { error?: string } }; message?: string }) => {
-      toast.error(
-        error.response?.data?.error || "Failed to create template",
-      );
+    onError: (error: {
+      response?: { data?: { error?: string } };
+      message?: string;
+    }) => {
+      toast.error(error.response?.data?.error || "Failed to create template");
       setIsSubmitting(false);
     },
   });
 
-  const submit = async (payload: Parameters<typeof examTemplateAPI.create>[0]) => {
+  const submit = async (
+    payload: Parameters<typeof examTemplateAPI.create>[0],
+    options?: { isDraft?: boolean },
+  ) => {
     setIsSubmitting(true);
     try {
-      await createMutation.mutateAsync({ ...payload, isPublished: true });
+      await createMutation.mutateAsync({
+        ...payload,
+        isPublished: !options?.isDraft,
+      });
+      toast.success(
+        options?.isDraft
+          ? "Draft saved successfully"
+          : "Template created successfully",
+      );
+      navigate("/lecturer/exam-templates");
     } catch {
       // Error already toasted in onError; ensure button re-enables.
       setIsSubmitting(false);

@@ -199,7 +199,7 @@ export default function CodeEditor({
     );
   };
 
-  // Skip the first mount — the parent already holds the correct initialFiles
+  // Skip the first mount - the parent already holds the correct initialFiles
   // from server data. Firing on mount would spuriously mark the question dirty
   // and trigger an immediate autosave.
   const isFirstRender = useRef(true);
@@ -219,9 +219,7 @@ export default function CodeEditor({
       // activeFileIndex state hasn't flushed yet.
       const idx = activeFileIndexRef.current;
       setFiles((prev) =>
-        prev.map((f, i) =>
-          i === idx ? { ...f, content: value } : f,
-        ),
+        prev.map((f, i) => (i === idx ? { ...f, content: value } : f)),
       );
     }
   };

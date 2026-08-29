@@ -18,15 +18,14 @@ const classroomSchema = new mongoose.Schema(
 
           const numericYear = Number(value);
           return (
-            numericYear >= 2000 &&
-            numericYear <= new Date().getFullYear() + 1
+            numericYear >= 2000 && numericYear <= new Date().getFullYear() + 1
           );
         },
         message: "Academic year must be a valid 4-digit year",
       },
     },
 
-    // Student IDs (e.g. "521H0001") — stored as raw numbers,
+    // Student IDs (e.g. "521H0001") - stored as raw numbers,
     // formatted to email on session creation
     students: {
       type: [String],
@@ -48,7 +47,6 @@ classroomSchema.index({ createdBy: 1 });
 classroomSchema.index({ createdBy: 1, academicYear: 1 });
 
 const ClassroomModel =
-  mongoose.models.Classroom ||
-  mongoose.model("Classroom", classroomSchema);
+  mongoose.models.Classroom || mongoose.model("Classroom", classroomSchema);
 
 export default ClassroomModel;
