@@ -578,17 +578,11 @@ export default function ExamSessionCreate() {
             {/* Blacklist */}
             <div className="bg-card border border-border rounded-md p-5 space-y-3">
               <h2 className="text-sm font-semibold text-foreground">
-            <div className="bg-card border border-border rounded-md p-5 space-y-2">
-              <Label
-                htmlFor="blacklist"
-                className="text-sm font-semibold text-foreground block"
-              >
                 Blacklist{" "}
                 <span className="text-xs font-normal text-muted-foreground">
                   (optional)
                 </span>
               </h2>
-              </Label>
               <Textarea
                 id="blacklist"
                 value={blacklist}
