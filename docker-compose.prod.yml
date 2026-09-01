@@ -74,7 +74,7 @@ services:
         VITE_BACKEND_URL: /api
     image: derit-web:latest
     ports:
-      - "80:80"
+      - "2915:80"
     restart: unless-stopped
     mem_limit: 384m
     deploy:
