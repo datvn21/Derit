@@ -40,16 +40,24 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.8'
+          cpus: "3"
+          cpus: "1.8"
           memory: 2G
         reservations:
-          cpus: '1.0'
+          cpus: "1.5"
+          cpus: "1.0"
           memory: 1.25G
     depends_on:
       mongodb:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
