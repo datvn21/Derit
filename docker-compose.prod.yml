@@ -11,11 +11,6 @@ services:
           memory: 768M
         reservations:
           memory: 384M
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   server:
     build:
@@ -64,6 +59,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
 
   web:
     build:
