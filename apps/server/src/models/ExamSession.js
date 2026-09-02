@@ -86,12 +86,26 @@ const examSessionSchema = new mongoose.Schema(
       default: "scheduled",
     },
 
+    // R2 Object Storage Resources (uploaded when session is ongoing, deleted when session ends)
+    r2Resources: {
+      type: [
+        {
+          codeNumber: { type: String, required: true },
+          localPdfUrl: { type: String, required: true },
+          r2Key: { type: String, required: true },
+          r2Url: { type: String, required: true },
+        },
+      ],
+      default: [],
+    },
+
     // Metadata
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+
   },
   {
     timestamps: true,

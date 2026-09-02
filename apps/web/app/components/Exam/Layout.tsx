@@ -807,7 +807,15 @@ export default function Layout() {
         {/* ── Left: PDF ── */}
         <div className="overflow-hidden" style={{ width: `${splitPosition}%` }}>
           <div className="h-full">
-            <div className="h-full overflow-hidden border border-border bg-card"></div>
+            <div className="h-full overflow-hidden border border-border bg-card">
+              {pdfUrl ? (
+                <PDFViewer pdfUrl={pdfUrl} className="h-full" />
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                  Không tìm thấy tài liệu đề thi PDF
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

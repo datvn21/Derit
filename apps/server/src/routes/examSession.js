@@ -8,6 +8,7 @@ import ClassroomModel from "../models/Classroom.js";
 import { isAuthenticated } from "../middleware/middlewareAuth.js";
 import { isLecturerOrAdmin } from "../middleware/isLecturerOrAdmin.js";
 import { normalizeEmails } from "../services/studentEmail.js";
+import { uploadSessionPdfs, deleteSessionPdfs } from "../services/r2Service.js";
 
 const examSessionRouter = Router();
 
@@ -672,6 +673,14 @@ examSessionRouter.delete(
         });
       }
 
+      // Cleanup any R2 files if any existed
+      try {
+        const r2Keys = session.r2Resources?.map((r) => r.r2Key) || [];
+        await deleteSessionPdfs(session._id, r2Keys);
+      } catch (r2Err) {
+        console.error("[examSession/delete] R2 cleanup warning:", r2Err.message);
+      }
+
       await session.deleteOne();
       res.json({ message: "Session deleted successfully" });
     } catch (error) {
@@ -690,7 +699,7 @@ examSessionRouter.post(
       const session = await ExamSessionModel.findOne({
         _id: req.params.id,
         createdBy: req.dbUser._id,
-      });
+      }).populate("examTemplateId");
 
       if (!session) {
         return res
@@ -699,7 +708,22 @@ examSessionRouter.post(
       }
 
       session.status = "ongoing";
+
+      // Auto-upload session PDFs to Cloudflare R2
+      if (session.examTemplateId) {
+        try {
+          const r2Resources = await uploadSessionPdfs(
+            session,
+            session.examTemplateId,
+          );
+          session.r2Resources = r2Resources;
+        } catch (r2Err) {
+          console.error("[examSession/start] R2 upload error:", r2Err.message);
+        }
+      }
+
       await session.save();
+      notifySessionUpdate(session._id);
 
       res.json({ session });
     } catch (error) {
@@ -727,7 +751,18 @@ examSessionRouter.post(
       }
 
       session.status = "ended";
+
+      // Auto-delete session PDFs from Cloudflare R2
+      const r2Keys = session.r2Resources?.map((r) => r.r2Key) || [];
+      try {
+        await deleteSessionPdfs(session._id, r2Keys);
+      } catch (r2Err) {
+        console.error("[examSession/end] R2 delete error:", r2Err.message);
+      }
+      session.r2Resources = [];
+
       await session.save();
+      notifySessionUpdate(session._id);
 
       res.json({ session });
     } catch (error) {
@@ -1000,13 +1035,20 @@ examSessionRouter.get("/:id/exam", isAuthenticated, async (req, res) => {
       return res.status(404).json({ error: "Exam code not found in template" });
     }
 
+    // Resolve PDF URL: prioritize R2 URL if available, fallback to local pdfUrl
+    const r2Resource = session.r2Resources?.find(
+      (r) => r.codeNumber === examCode.codeNumber,
+    );
+    const resolvedPdfUrl =
+      r2Resource && r2Resource.r2Url ? r2Resource.r2Url : examCode.pdfUrl;
+
     res.json({
       exam: {
         examName: template.templateName,
         examType: template.examType,
         language: template.language,
         duration: template.duration,
-        pdfResources: [examCode.pdfUrl],
+        pdfResources: [resolvedPdfUrl],
         // Strip testFile.content – only expose hasTestFile flag to students
         questions: examCode.questions.map((q) => ({
           questionNumber: q.questionNumber,

@@ -24,6 +24,10 @@ import {
 } from "./src/services/nsjailExecutor.js";
 import adminRouter from "./src/routes/admin.js";
 import e2eSupportRouter from "./src/routes/e2eSupport.js";
+import {
+  startSessionLifecycleScheduler,
+  stopSessionLifecycleScheduler,
+} from "./src/services/sessionLifecycle.js";
 
 dotenv.config();
 
@@ -183,6 +187,9 @@ connectDB().then(async () => {
     console.warn("nsjail executor init warning:", err.message);
   }
 
+  // Start automatic exam session lifecycle scheduler (starts/ends sessions and manages R2 PDFs)
+  startSessionLifecycleScheduler();
+
   httpServer = app.listen(PORT, () => {
     console.log(`server started at port: ${PORT}`);
   });
@@ -210,6 +217,8 @@ const gracefulShutdown = async (signal) => {
       await new Promise((resolve) => httpServer.close(resolve));
       console.log("HTTP server closed");
     }
+
+    stopSessionLifecycleScheduler();
 
     await cleanupNsjailExecutor();
     console.log("nsjail executor cleaned up successfully");
