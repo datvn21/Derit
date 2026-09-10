@@ -8,11 +8,13 @@ RUN npm ci || npm install
 COPY . .
 ARG VITE_BACKEND_URL=http://localhost:3000
 ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
-RUN npm run build
+RUN npm run build \
+    && test -f /app/build/client/index.html
 
 FROM nginx:alpine
 
-COPY --from=builder /app/build/client /usr/share/nginx/html
+RUN rm -rf /usr/share/nginx/html/*
+COPY --from=builder /app/build/client/ /usr/share/nginx/html/
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
