@@ -31,7 +31,6 @@ services:
       NODE_ENV: production
       PORT: 3000
       MONGODB_CONNECTIONSTRING: mongodb://mongodb:27017/derit
-      FRONTEND_URL: http://localhost
       NSJAIL_PATH: /usr/bin/nsjail
       NSJAIL_CONFIG_DIR: /app/config
       NSJAIL_WORKSPACE_DIR: /tmp/nsjail-workspace
