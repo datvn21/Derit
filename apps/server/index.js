@@ -51,6 +51,15 @@ const ENABLE_SWAGGER =
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// A production build can still be run locally over plain HTTP (for example,
+// through the bundled Nginx container). `secure: true` would prevent the
+// browser from storing/sending the session cookie in that case. Prefer an
+// explicit override, otherwise infer it from the public frontend URL.
+const sessionCookieSecure =
+  process.env.SESSION_COOKIE_SECURE !== undefined
+    ? process.env.SESSION_COOKIE_SECURE === "true"
+    : process.env.FRONTEND_URL?.startsWith("https://") === true;
+
 //middleware
 // Templates can contain several starter/test files, so the default ~100kb
 // JSON parser limit is too small. Keep this below MongoDB's document limit.
@@ -121,8 +130,8 @@ app.use(
     saveUninitialized: false,
     cookie: {
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: sessionCookieSecure,
+      sameSite: sessionCookieSecure ? "none" : "lax",
       httpOnly: true,
     },
   }),
