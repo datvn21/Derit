@@ -72,8 +72,8 @@ services:
       args:
         VITE_BACKEND_URL: /api
     image: derit-web:latest
-    ports:
-      - "2915:80"
+    expose:
+      - "80"
     restart: unless-stopped
     mem_limit: 384m
     deploy:
@@ -85,6 +85,19 @@ services:
     depends_on:
       server:
         condition: service_healthy
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "2915:80"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+      web:
+        condition: service_started
 
 volumes:
   mongodb_prod_data:

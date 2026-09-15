@@ -148,7 +148,7 @@ Build và chạy cấu hình production:
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Web được expose tại cổng `80`; backend chỉ có thể truy cập nội bộ qua Nginx tại `/api`. Reverse proxy cũng chuyển tiếp `/uploads/*` tới backend để frontend tải được PDF.
+Nginx được expose tại cổng `2915`; backend chỉ có thể truy cập nội bộ qua Nginx tại `/api`. Reverse proxy cũng chuyển tiếp `/uploads/*` tới backend để frontend tải được PDF.
 
 Với domain thật, cập nhật các giá trị sau:
 
